@@ -6,8 +6,10 @@
 <div class="admin-wrap">
   <div class="page-head">
     <h1>操作日志</h1>
-    <div class="sub"><a href="/admin/">返回工作台</a></div>
+    <div class="sub">谁在何时对什么做了什么 —— 全程留痕</div>
   </div>
+
+  {% include "admin/_nav.html" %}
 
   <ul class="log-list">
     {% for log in logs %}

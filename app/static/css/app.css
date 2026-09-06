@@ -429,6 +429,44 @@ textarea { min-height: 130px; resize: vertical; }
 
 /* ---------- 管理后台 ---------- */
 .admin-wrap { max-width: 1080px; margin: 0 auto; padding: 28px 20px 80px; }
+.admin-tabs {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  margin-bottom: 24px; padding: 8px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(14px);
+}
+.admin-tabs a {
+  color: var(--muted); font-size: 13.5px; padding: 7px 14px; border-radius: 10px;
+  border: 1px solid transparent;
+}
+.admin-tabs a:hover { color: var(--accent); background: rgba(232,70,124,0.06); text-decoration: none; }
+.admin-tabs a.on {
+  color: #fff; font-weight: 600;
+  background: linear-gradient(160deg, #f78bb8, #e8467c 55%, #c3326a);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 4px 14px rgba(232,70,124,0.28);
+}
+.admin-user { margin-left: auto; color: var(--muted); font-size: 12.5px; padding-right: 6px; }
+.admin-user a { font-size: 12.5px; }
+
+.fast-row { display: flex; gap: 10px; }
+.fast-row input[type=text] { flex: 1; }
+.fast-row .btn { white-space: nowrap; }
+.details-box summary {
+  cursor: pointer; color: var(--accent); font-size: 14px; font-weight: 600;
+  list-style: none;
+}
+.details-box summary::-webkit-details-marker { display: none; }
+.details-box summary::before { content: "▸ "; }
+.details-box[open] summary::before { content: "▾ "; }
+.stat { display: block; text-decoration: none; }
+a.stat:hover { text-decoration: none; border-color: rgba(232,70,124,0.45); transform: translateY(-2px); transition: all .15s ease; }
+
+@media (max-width: 640px) {
+  .fast-row { flex-direction: column; }
+  .admin-user { margin-left: 0; width: 100%; }
+}
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 26px; }
 .stat { border-radius: 14px; padding: 14px 16px; }
 .stat .n { font-size: 24px; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; text-shadow: 0 0 14px #e8467c22; }

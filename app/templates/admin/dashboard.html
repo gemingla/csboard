@@ -6,16 +6,30 @@
 <div class="admin-wrap">
   <div class="page-head">
     <h1>管理台</h1>
-    <div class="sub">登录身份：{{ admin.username }} · <a href="/admin/logout">退出</a></div>
+    <div class="sub">登录身份：{{ admin.username }} · 榜单由你掌控</div>
   </div>
 
+  {% include "admin/_nav.html" %}
+
+  <div class="section-title">➕ 快速添加（填一行，回车即上榜）</div>
+  <form class="form-card" method="post" action="/admin/reports/add-fast" id="add-fast">
+    <div class="fast-row">
+      <input type="text" name="who" placeholder="姓名 / 称号（必填）" required autofocus>
+      <input type="text" name="reason" placeholder="上榜原因 / 事迹（可选）">
+      <input type="text" name="heat" placeholder="指数（可选）" style="width:120px">
+      <button class="btn" type="submit">＋ 添加</button>
+    </div>
+    <div class="hint" style="margin-top:8px">标题自动生成「年度好人 · 姓名」；添加后自动停留本页，可继续连续录入。
+      需要自定义标题/时间/地点/榜单 → <a href="/admin/reports">用完整表单</a></div>
+  </form>
+
   <div class="stat-grid">
-    <div class="stat"><div class="n">{{ stats.pending }}</div><div class="t">待审核</div></div>
-    <div class="stat"><div class="n">{{ stats.approved }}</div><div class="t">已公示</div></div>
-    <div class="stat"><div class="n">{{ stats.processed }}</div><div class="t">已处理</div></div>
-    <div class="stat"><div class="n">{{ stats.transferred }}</div><div class="t">已转交</div></div>
-    <div class="stat"><div class="n">{{ stats.rejected }}</div><div class="t">已驳回</div></div>
-    <div class="stat"><div class="n" style="font-size:17px">{{ stats.heat }}</div><div class="t">总围观指数</div></div>
+    <a class="stat" href="/admin/reports?status=pending"><div class="n">{{ stats.pending }}</div><div class="t">待审核</div></a>
+    <a class="stat" href="/admin/reports?status=approved"><div class="n">{{ stats.approved }}</div><div class="t">已公示</div></a>
+    <a class="stat" href="/admin/reports?status=processed"><div class="n">{{ stats.processed }}</div><div class="t">已处理</div></a>
+    <a class="stat" href="/admin/reports?status=transferred"><div class="n">{{ stats.transferred }}</div><div class="t">已转交</div></a>
+    <a class="stat" href="/admin/reports?status=rejected"><div class="n">{{ stats.rejected }}</div><div class="t">已驳回</div></a>
+    <a class="stat" href="/admin/reports"><div class="n" style="font-size:17px">{{ stats.heat }}</div><div class="t">总围观指数</div></a>
   </div>
 
   <div class="section-title">🕐 待审核队列</div>
@@ -50,19 +64,7 @@
   <div style="color:var(--muted);padding:8px 0">队列空空，岁月静好。</div>
   {% endif %}
 
-  <div class="section-title">➕ 快速添加榜单成员</div>
-  <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
-    <form class="inline-form" method="post" action="/admin/reports/add" style="flex:1;min-width:520px">
-      <input type="text" name="title" placeholder="标题：年度好人 · 张三" required style="flex:2">
-      <input type="text" name="who" placeholder="姓名" style="flex:1">
-      <input type="text" name="reason" placeholder="上榜原因（一句话）" required style="flex:3">
-      <input type="text" name="heat" placeholder="围观指数（可选）" style="width:110px">
-      <button class="btn small" type="submit">添加</button>
-    </form>
-    <a class="btn secondary small" href="/admin/reports">完整表单 →</a>
-  </div>
-
-  <div class="section-title">📋 最近提交（全部状态）</div>
+  <div class="section-title">📋 最近上榜（全部状态）</div>
   <table class="table">
     <thead><tr><th>#</th><th>标题</th><th>状态</th><th>围观</th><th>提交时间</th></tr></thead>
     <tbody>
@@ -77,11 +79,5 @@
       {% endfor %}
     </tbody>
   </table>
-
-  <div style="margin-top:20px;display:flex;gap:12px">
-    <a class="btn secondary" href="/admin/reports">案件管理（全量）</a>
-    <a class="btn secondary" href="/admin/logs">操作日志</a>
-    <a class="btn secondary" href="/">返回前台</a>
-  </div>
 </div>
 {% endblock %}

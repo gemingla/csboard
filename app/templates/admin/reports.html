@@ -1,61 +1,79 @@
 {% extends "base.html" %}
 
-{% block title %}案件管理 · {{ app_name }}{% endblock %}
+{% block title %}榜单管理 · {{ app_name }}{% endblock %}
 
 {% block content %}
 <div class="admin-wrap">
   <div class="page-head">
     <h1>榜单管理</h1>
-    <div class="sub">
-      <a href="/admin/">工作台</a> ·
+    <div class="sub">添加榜单成员 · 管理全部条目</div>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  <!-- ⚡ 快速添加：一行即上榜 -->
+  <div class="section-title">⚡ 快速添加（填一行，回车即上榜）</div>
+  <form class="form-card" method="post" action="/admin/reports/add-fast" id="add-fast">
+    <div class="fast-row">
+      <input type="text" name="who" placeholder="姓名 / 称号（必填）" required autofocus>
+      <input type="text" name="reason" placeholder="上榜原因 / 事迹（可选）">
+      <input type="text" name="heat" placeholder="指数（可选）" style="width:120px">
+      <button class="btn" type="submit">＋ 添加</button>
+    </div>
+    <div class="hint" style="margin-top:8px">标题自动生成「年度好人 · 姓名」；添加后停留本页，可继续连按回车连加。</div>
+  </form>
+
+  <!-- 📋 完整表单（默认收起） -->
+  <details class="form-card details-box">
+    <summary>📋 完整表单（自定义标题 / 时间 / 地点 / 榜单）</summary>
+    <form method="post" action="/admin/reports/add" style="margin-top:14px">
+      <div class="add-row2" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="field">
+          <label>标题 <span class="req">*</span></label>
+          <input type="text" name="title" maxlength="120" required placeholder="例如：年度好人 · 张三">
+        </div>
+        <div class="field">
+          <label>姓名 / 称号</label>
+          <input type="text" name="who" maxlength="80" placeholder="例如：张三">
+        </div>
+      </div>
+      <div class="field">
+        <label>上榜原因 / 事迹 <span class="req">*</span></label>
+        <textarea name="reason" required placeholder="为什么上榜？做了什么好事？"></textarea>
+      </div>
+      <div class="add-row2" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="field">
+          <label>围观指数（可选）</label>
+          <input type="text" name="heat" placeholder="留空 = 0；可填大量级数字彩蛋">
+        </div>
+        <div class="field">
+          <label>榜单</label>
+          <select name="board">
+            {% for b in boards %}<option value="{{ b.slug }}">{{ b.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label>时间（可选）</label>
+          <input type="text" name="happened_at" maxlength="40" placeholder="例如：2024 年度">
+        </div>
+        <div class="field">
+          <label>地点（可选）</label>
+          <input type="text" name="location" maxlength="120" placeholder="例如：高一（3）班">
+        </div>
+      </div>
+      <button class="btn" type="submit">＋ 添加并上榜</button>
+    </form>
+  </details>
+
+  <div class="section-title">
+    📋 全部条目
+    <span style="font-size:12px;color:var(--muted)">
       筛选：
       <a href="/admin/reports">全部</a> /
       <a href="/admin/reports?status=approved">已公示</a> /
       <a href="/admin/reports?status=processed">已处理</a>
-    </div>
+    </span>
   </div>
-
-  <div class="section-title">＋ 添加榜单成员（填表即上墙）</div>
-  <form class="form-card" method="post" action="/admin/reports/add">
-    <div class="field">
-      <label>标题 <span class="req">*</span></label>
-      <input type="text" name="title" maxlength="120" required placeholder="例如：年度好人 · 张三">
-    </div>
-    <div class="field">
-      <label>姓名 / 称号</label>
-      <input type="text" name="who" maxlength="80" placeholder="例如：张三">
-      <div class="hint">上墙显示的称呼，可留空（默认：匿名）。</div>
-    </div>
-    <div class="field">
-      <label>上榜原因 / 事迹 <span class="req">*</span></label>
-      <textarea name="reason" required placeholder="为什么上榜？做了什么好事？"></textarea>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px" class="add-row2">
-      <div class="field">
-        <label>围观指数（可选）</label>
-        <input type="text" name="heat" placeholder="留空 = 0；可填大量级数字彩蛋">
-      </div>
-      <div class="field">
-        <label>榜单</label>
-        <select name="board">
-          {% for b in boards %}<option value="{{ b.slug }}">{{ b.name }}</option>{% endfor %}
-        </select>
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px" class="add-row2">
-      <div class="field">
-        <label>时间（可选）</label>
-        <input type="text" name="happened_at" maxlength="40" placeholder="例如：2024 年度">
-      </div>
-      <div class="field">
-        <label>地点（可选）</label>
-        <input type="text" name="location" maxlength="120" placeholder="例如：高一（3）班">
-      </div>
-    </div>
-    <button class="btn" type="submit">＋ 添加并上榜</button>
-  </form>
-
-  <div class="section-title">📋 全部条目</div>
   <table class="table">
     <thead><tr><th>#</th><th>标题</th><th>姓名</th><th>榜单</th><th>状态</th><th>围观</th><th>操作</th></tr></thead>
     <tbody>
@@ -70,7 +88,7 @@
         <td class="ops">
           {% if r.status != 'processed' %}
           <form class="inline-form" method="post" action="/admin/report/{{ r.id }}/process" data-confirm="登记处理结果？该条目将标记为已处理。">
-            <input type="text" name="result" placeholder="处理结果（可选）">
+            <input type="text" name="result" placeholder="结果（可选）">
             <button class="btn small" type="submit">处理</button>
           </form>
           {% endif %}
@@ -81,7 +99,7 @@
       </tr>
       {% else %}
       <tr><td colspan="7" style="color:var(--muted);text-align:center;padding:20px">
-        榜单暂时空着 —— 用上方表单添加第一位上榜成员吧 🏆
+        榜单暂时空着 —— 用上方快速添加，第一位上榜成员等你 🏆
       </td></tr>
       {% endfor %}
     </tbody>

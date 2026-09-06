@@ -76,7 +76,7 @@ def dashboard(request: Request, db: Annotated[Session, Depends(get_db)]):
         select(Report).order_by(Report.created_at.desc()).limit(12)
     ).all()
     return _tpl(request, "admin/dashboard.html", admin=admin, stats=stats,
-                pending=pending, recent=recent)
+                pending=pending, recent=recent, cur_page="dashboard")
 
 
 @router.get("/reports")
@@ -91,7 +91,42 @@ def reports_page(request: Request, db: Annotated[Session, Depends(get_db)],
     reports = db.scalars(stmt).all()
     boards = db.scalars(select(Board).where(Board.is_active == True).order_by(Board.sort_order)).all()  # noqa: E712
     return _tpl(request, "admin/reports.html", admin=admin, reports=reports,
-                cur=status, boards=boards, error=None)
+                cur=status, boards=boards, error=None, cur_page="reports")
+
+
+@router.post("/reports/add-fast")
+def add_fast(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    who: Annotated[str, Form()],
+    reason: Annotated[str, Form()] = "",
+    heat: Annotated[str, Form()] = "0",
+):
+    """快速添加：一行完成 —— 姓名(必填)+事迹(可选)+围观指数(可选)。
+    标题自动生成为「年度好人 · 姓名」；返回后停留在后台并聚焦姓名框，支持连续录入。"""
+    admin = current_admin(request, db)
+    if admin is None:
+        return RedirectResponse("/admin/login", status_code=303)
+    board_obj = db.scalar(select(Board).order_by(Board.sort_order).limit(1))
+    if board_obj is None:
+        return RedirectResponse("/admin/reports", status_code=303)
+    try:
+        heat_val = max(0, int(heat or 0))
+    except ValueError:
+        heat_val = 0
+    name = (who or "匿名").strip()[:60]
+    report = Report(
+        board_id=board_obj.id,
+        title=f"年度好人 · {name}"[:120],
+        who=name,
+        reason=reason,
+        heat=heat_val,
+        status=Report.STATUS_APPROVED,
+    )
+    db.add(report)
+    _log(db, admin, "add", target=Report, detail=f"快速添加: {name}")
+    db.commit()
+    return RedirectResponse("/admin/reports#add-fast", status_code=303)
 
 
 @router.post("/reports/add")
@@ -198,4 +233,4 @@ def logs_page(request: Request, db: Annotated[Session, Depends(get_db)]):
     if admin is None:
         return RedirectResponse("/admin/login", status_code=303)
     logs = db.scalars(select(Log).order_by(Log.created_at.desc()).limit(200)).all()
-    return _tpl(request, "admin/logs.html", admin=admin, logs=logs)
+    return _tpl(request, "admin/logs.html", admin=admin, logs=logs, cur_page="logs")
