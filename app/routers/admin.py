@@ -62,36 +62,27 @@ def dashboard(request: Request, db: Annotated[Session, Depends(get_db)]):
     if admin is None:
         return RedirectResponse("/admin/login", status_code=303)
     stats = {
-        "pending": db.scalar(select(func.count()).select_from(Report).where(Report.status == Report.STATUS_PENDING)) or 0,
+        "total": db.scalar(select(func.count()).select_from(Report)) or 0,
         "approved": db.scalar(select(func.count()).select_from(Report).where(Report.status == Report.STATUS_APPROVED)) or 0,
-        "processed": db.scalar(select(func.count()).select_from(Report).where(Report.status == Report.STATUS_PROCESSED)) or 0,
-        "rejected": db.scalar(select(func.count()).select_from(Report).where(Report.status == Report.STATUS_REJECTED)) or 0,
-        "transferred": db.scalar(select(func.count()).select_from(Report).where(Report.status == Report.STATUS_TRANSFERRED)) or 0,
         "heat": db.scalar(select(func.coalesce(func.sum(Report.heat), 0))) or 0,
     }
-    pending = db.scalars(
-        select(Report).where(Report.status == Report.STATUS_PENDING).order_by(Report.created_at.desc())
-    ).all()
     recent = db.scalars(
         select(Report).order_by(Report.created_at.desc()).limit(12)
     ).all()
     return _tpl(request, "admin/dashboard.html", admin=admin, stats=stats,
-                pending=pending, recent=recent, cur_page="dashboard")
+                recent=recent, cur_page="dashboard")
 
 
 @router.get("/reports")
-def reports_page(request: Request, db: Annotated[Session, Depends(get_db)],
-                 status: str = ""):
+def reports_page(request: Request, db: Annotated[Session, Depends(get_db)]):
     admin = current_admin(request, db)
     if admin is None:
         return RedirectResponse("/admin/login", status_code=303)
     stmt = select(Report).order_by(Report.created_at.desc())
-    if status:
-        stmt = stmt.where(Report.status == status)
     reports = db.scalars(stmt).all()
     boards = db.scalars(select(Board).where(Board.is_active == True).order_by(Board.sort_order)).all()  # noqa: E712
     return _tpl(request, "admin/reports.html", admin=admin, reports=reports,
-                cur=status, boards=boards, error=None, cur_page="reports")
+                boards=boards, cur_page="reports")
 
 
 @router.post("/reports/add-fast")
@@ -187,6 +178,7 @@ def delete_report(report_id: int, request: Request, db: Annotated[Session, Depen
 
 
 def _apply_status(request: Request, db: Session, report_id: int, new_status: str, detail: str = "") -> RedirectResponse:
+    """（保留方法：供将来审核流复用；当前界面已无使用。）"""
     admin = current_admin(request, db)
     if admin is None:
         return RedirectResponse("/admin/login", status_code=303)
@@ -194,12 +186,7 @@ def _apply_status(request: Request, db: Session, report_id: int, new_status: str
     if report is None:
         return RedirectResponse("/admin/reports", status_code=303)
     report.status = new_status
-    if new_status == Report.STATUS_REJECTED:
-        report.reject_reason = detail
-    if new_status == Report.STATUS_PROCESSED:
-        report.process_result = detail
-    _log(db, admin, new_status if new_status != Report.STATUS_PROCESSED else "process",
-         target=Report, target_id=report.id, detail=detail or "（无备注）")
+    _log(db, admin, "status", target=Report, target_id=report.id, detail=detail or "（无备注）")
     db.commit()
     return RedirectResponse("/admin/reports", status_code=303)
 

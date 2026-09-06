@@ -65,17 +65,9 @@
     </form>
   </details>
 
-  <div class="section-title">
-    📋 全部条目
-    <span style="font-size:12px;color:var(--muted)">
-      筛选：
-      <a href="/admin/reports">全部</a> /
-      <a href="/admin/reports?status=approved">已公示</a> /
-      <a href="/admin/reports?status=processed">已处理</a>
-    </span>
-  </div>
+  <div class="section-title">📋 全部条目</div>
   <table class="table">
-    <thead><tr><th>#</th><th>标题</th><th>姓名</th><th>榜单</th><th>状态</th><th>围观</th><th>操作</th></tr></thead>
+    <thead><tr><th>#</th><th>标题</th><th>姓名</th><th>榜单</th><th>围观</th><th>操作</th></tr></thead>
     <tbody>
       {% for r in reports %}
       <tr>
@@ -83,22 +75,15 @@
         <td><a href="/report/{{ r.id }}" target="_blank">{{ r.title }}</a></td>
         <td>{{ r.who }}</td>
         <td>{{ r.board.name }}</td>
-        <td><span class="status-badge {{ r.status }}">{{ r.status_label }}</span></td>
         <td>{{ r.heat }}</td>
         <td class="ops">
-          {% if r.status != 'processed' %}
-          <form class="inline-form" method="post" action="/admin/report/{{ r.id }}/process" data-confirm="登记处理结果？该条目将标记为已处理。">
-            <input type="text" name="result" placeholder="结果（可选）">
-            <button class="btn small" type="submit">处理</button>
-          </form>
-          {% endif %}
           <form class="inline-form" method="post" action="/admin/report/{{ r.id }}/delete" data-confirm="确定删除「{{ r.title }}」？删除后不可恢复。">
             <button class="btn small danger" type="submit">删除</button>
           </form>
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="7" style="color:var(--muted);text-align:center;padding:20px">
+      <tr><td colspan="6" style="color:var(--muted);text-align:center;padding:20px">
         榜单暂时空着 —— 用上方快速添加，第一位上榜成员等你 🏆
       </td></tr>
       {% endfor %}
