@@ -101,7 +101,12 @@ a:hover { text-decoration: underline; }
   border-left: 2px solid var(--border); padding-left: 10px;
 }
 .side-video { position: relative; }
-.side-video video { aspect-ratio: 3/4; object-fit: cover; }
+.side-video video {
+  /* 拉长版：高度撑起与榜单相配，画面居中裁剪 */
+  height: clamp(480px, 64vh, 720px);
+  object-fit: cover;
+  display: block;
+}
 .side-video .v-title { padding: 8px 10px; }
 .duet-cta {
   position: absolute; inset: 0; z-index: 5; cursor: pointer;
@@ -163,7 +168,7 @@ a:hover { text-decoration: underline; }
   .stage3 { grid-template-columns: 1fr; }
   .stage-side { order: 2; }
   .stage-board { order: 1; }
-  .side-video video { aspect-ratio: 16/9; }
+  .side-video video { height: auto; aspect-ratio: 16/9; }
 }
 
 /* ---------- 首页旧卡片墙（保留兼容，不再主用） ---------- */
