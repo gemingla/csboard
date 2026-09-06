@@ -75,10 +75,10 @@ def terms_accept(request: Request):
 def terms_rejected(request: Request):
     return HTMLResponse(
         "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>条款</title>"
-        "<style>body{background:#0e1013;color:#ede9e0;font-family:system-ui;"
+        "<style>body{background:#fdf2f7;color:#4a2b4a;font-family:system-ui;"
         "display:flex;align-items:center;justify-content:center;height:100vh;margin:0}"
-        "div{text-align:center}p{color:#9aa3b2}a{color:#f5b301}</style></head><body>"
-        "<div><h1>那……先别看了</h1><p>不接受条款的话，本榜暂不开放。想好了再来。</p>"
+        "div{text-align:center}p{color:#8b6b85}a{color:#e8467c}</style></head><body>"
+        "<div><h1 style='color:#c3326a'>那……先别看了</h1><p>不接受条款的话，本榜暂不开放。想好了再来。</p>"
         "<p><a href='/'>返回首页</a></p></div></body></html>"
     )
 
