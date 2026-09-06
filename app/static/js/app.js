@@ -67,13 +67,16 @@
     }
 
     vids.forEach(function (v, i) {
-      v.addEventListener("click", begin);
+      v.addEventListener("click", function () {
+        begin();      /* 首次点击：先开启轮唱 */
+        show(i);      /* 并立即切到被点击的视频 */
+      });
       v.addEventListener("play", function () {
         vids.forEach(function (o, j) { if (j !== i && !o.paused) o.pause(); });
       });
     });
     document.getElementById("duet-cta")?.addEventListener("click", begin);
-    show(0); /* 自动播放尝试，被浏览器拦截则由 CTA 兜底 */
+    /* 不自动开播：等用户点击「轮流献唱」按钮或任意视频后才开始 */
   }
 
   /* ---- 表单简单增强（提交前确认 / 字数统计） ---- */
