@@ -1,9 +1,9 @@
-"""公共（前台）路由：首页、榜单、详情页（看原因）、匿名提交、围观、条款。"""
+"""公共（前台）路由：首页（好人榜）、详情页（看原因）、围观、条款。"""
 from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -50,7 +50,7 @@ def index(request: Request, db: Annotated[Session, Depends(get_db)]):
         reports = db.scalars(
             select(Report).where(Report.board_id == board.id,
                                  Report.status.in_(["approved", "processed", "transferred"]))
-            .order_by(Report.heat.desc()).limit(9)
+            .order_by(Report.heat.desc())
         ).all()
         sections.append({"board": board, "reports": reports})
     return _tpl(request, "index.html",
@@ -119,39 +119,3 @@ def add_heat(report_id: int, db: Annotated[Session, Depends(get_db)]):
         report.heat += 1
         db.commit()
     return RedirectResponse(f"/report/{report_id}#heat", status_code=303)
-
-
-@router.get("/submit")
-def submit_page(request: Request):
-    return _tpl(request, "submit.html", active_slug=None)
-
-
-@router.post("/submit")
-def submit(
-    request: Request,
-    db: Annotated[Session, Depends(get_db)],
-    title: Annotated[str, Form()],
-    reason: Annotated[str, Form()],
-    who: Annotated[str, Form()] = "匿名",
-    location: Annotated[str, Form()] = "",
-    happened_at: Annotated[str, Form()] = "",
-    board: Annotated[str, Form()] = "exposed",
-):
-    """公开提交：默认投递到曝光榜，进入待审核队列。
-    注意：who 只允许特征描述（前端已有提示），后端不校验实名数据。"""
-    board_obj = db.scalar(select(Board).where(Board.slug == board))
-    if board_obj is None:
-        board_obj = db.scalar(select(Board).where(Board.slug == "exposed"))
-    report = Report(
-        board_id=board_obj.id if board_obj else 0,
-        title=(title or "未命名事件")[:120],
-        who=(who or "匿名")[:80],
-        reason=reason,
-        location=location[:120],
-        happened_at=happened_at[:40],
-        status=Report.STATUS_PENDING,
-    )
-    db.add(report)
-    db.commit()
-    db.refresh(report)
-    return RedirectResponse(f"/report/{report.id}?submitted=1", status_code=303)

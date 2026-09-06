@@ -35,18 +35,45 @@
     });
   }
 
-  /* ---- 视频卡片：点击切换/播放 ---- */
-  function bindVideos() {
-    document.querySelectorAll(".video-item video").forEach(function (v) {
-      v.addEventListener("click", function () {
-        if (v.paused) {
-          document.querySelectorAll("video").forEach(function (o) { if (o !== v) o.pause(); });
-          v.play();
+  /* ---- 左右献唱轮流播放（一个唱，另一个暂停；20 秒一换） ---- */
+  function bindDuet() {
+    var vids = Array.prototype.slice.call(document.querySelectorAll(".side-video video"));
+    if (vids.length < 2) return;
+    var DURATION = 20000;
+    var current = 0;
+    var timer = null;
+    var started = false;
+
+    function show(idx) {
+      current = idx;
+      vids.forEach(function (v, i) {
+        if (i === idx) {
+          v.play().catch(function () { /* 等用户手势 */ });
         } else {
           v.pause();
+          v.currentTime = 0;
         }
       });
+      clearInterval(timer);
+      timer = setInterval(function () { show((current + 1) % vids.length); }, DURATION);
+    }
+
+    function begin() {
+      if (started) return;
+      started = true;
+      var overlay = document.getElementById("duet-cta");
+      if (overlay) overlay.remove();
+      show(0);
+    }
+
+    vids.forEach(function (v, i) {
+      v.addEventListener("click", begin);
+      v.addEventListener("play", function () {
+        vids.forEach(function (o, j) { if (j !== i && !o.paused) o.pause(); });
+      });
     });
+    document.getElementById("duet-cta")?.addEventListener("click", begin);
+    show(0); /* 自动播放尝试，被浏览器拦截则由 CTA 兜底 */
   }
 
   /* ---- 表单简单增强（提交前确认 / 字数统计） ---- */
@@ -79,7 +106,7 @@
   document.addEventListener("DOMContentLoaded", function () {
     animateNumbers();
     bindTerms();
-    bindVideos();
+    bindDuet();
     bindForms();
     bindEasterEgg();
     /* 闪现消息自动消失 */

@@ -2,34 +2,34 @@
 
 {% block content %}
 <div class="container">
-  <div class="page-head">
+  <div class="page-head center-head">
     <h1>{{ board.name }}</h1>
     <div class="sub">{{ board.tagline }}</div>
   </div>
 
-  <div class="board-desc" style="margin-bottom:22px">{{ board.description }}</div>
+  <div class="board-desc" style="margin-bottom:22px;text-align:center">{{ board.description }}</div>
 
-  <div class="rank-cards">
+  <ol class="rank-rows">
     {% for r in reports %}
-    <a class="rank-card {% if loop.index == 1 %}medal-1{% elif loop.index == 2 %}medal-2{% elif loop.index == 3 %}medal-3{% endif %}"
-       href="/report/{{ r.id }}">
-      <div class="topline">
-        <span class="rank-no">
+    <li class="rank-row {% if loop.index == 1 %}medal-1{% elif loop.index == 2 %}medal-2{% elif loop.index == 3 %}medal-3{% endif %}">
+      <a href="/report/{{ r.id }}" class="rank-row-link">
+        <span class="row-medal">
           {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% elif loop.index == 3 %}🥉{% endif %}
-          {{ loop.index }}
         </span>
-        <span class="status-badge {{ r.status }}">{{ r.status_label }}</span>
-      </div>
-      <div class="r-title">{{ r.title }}</div>
-      <div class="r-who">{{ r.who }}</div>
-      <div class="r-foot">
-        <span>围观 <span class="r-heat" data-count="{{ r.heat }}">{{ r.heat }}</span></span>
-        <span>点我看原因 →</span>
-      </div>
-    </a>
+        <span class="row-rank no">{{ loop.index }}</span>
+        <span class="row-main">
+          <span class="row-title">{{ r.title }}</span>
+          <span class="row-who">{{ r.who }}</span>
+        </span>
+        <span class="row-side">
+          <span class="row-heat">👀 <span data-count="{{ r.heat }}">{{ r.heat }}</span></span>
+          <span class="row-go">看原因 →</span>
+        </span>
+      </a>
+    </li>
     {% else %}
-    <div style="color:var(--muted);grid-column:1/-1">本榜虚位以待。</div>
+    <li class="rank-row-empty">本榜虚位以待。</li>
     {% endfor %}
-  </div>
+  </ol>
 </div>
 {% endblock %}

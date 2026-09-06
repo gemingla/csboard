@@ -17,8 +17,6 @@
       <nav class="topnav">
         <a href="/" class="{% if active_slug is none and not admin %}active{% endif %}">首页</a>
         <a href="/board/honor" class="{% if active_slug == 'honor' %}active{% endif %}">好人榜</a>
-        <a href="/board/exposed" class="{% if active_slug == 'exposed' %}active{% endif %}">曝光榜</a>
-        <a href="/submit">匿名反映</a>
         {% if admin %}<a href="/admin/">管理台</a>{% endif %}
       </nav>
     </div>
@@ -27,8 +25,8 @@
   {% block content %}{% endblock %}
 
   <footer class="footer">
-    <div>{{ app_name }} v{{ version | default('0.1.0') }} · {{ motto }}<br>
-      匿名反映只描述行为，不公开实名；<a href="/about">关于 &amp; 彩蛋</a>
+    <div>{{ app_name }} v{{ version | default('0.1.1') }} · {{ motto }}<br>
+      歌声在左也在右，英雄在中央；<a href="/about">关于 &amp; 彩蛋</a>
     </div>
   </footer>
 

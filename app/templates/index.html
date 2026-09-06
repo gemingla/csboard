@@ -2,67 +2,75 @@
 
 {% block content %}
 <div class="container">
-  <div class="page-head">
-    <h1>年度榜 · 点进去，看原因</h1>
-    <div class="sub">{{ motto }} —— 一榜一故事，好事上金榜，坏事吃曝光。</div>
+  <div class="page-head center-head">
+    <h1>年度好人榜</h1>
+    <div class="sub">{{ motto }} —— 歌声在左也在右，英雄在中央。</div>
   </div>
 
-  {% if sections %}
-  <div class="boards-grid">
-    {% for s in sections %}
-    <section class="board-section">
+  {% for s in sections %}
+  <div class="stage3">
+    <!-- 左：献唱歌声 -->
+    <aside class="stage-side">
+      <div class="side-title">🎤 献唱 · 之一</div>
+      {% if videos[0] %}
+      <div class="video-item side-video">
+        <video id="v-left" src="{{ videos[0].url }}" preload="metadata" loop playsinline></video>
+        <div class="v-title"><span>{{ videos[0].name }}</span><span class="video-pill">点击播放</span></div>
+        <div class="duet-cta" id="duet-cta">🎵 点击开始<br>轮流献唱</div>
+      </div>
+      {% else %}
+      <div class="side-empty">（未找到视频素材）</div>
+      {% endif %}
+      <div class="side-note">歌声轮流，一边唱罢另一边登场。</div>
+    </aside>
+
+    <!-- 中：排行榜（竖向） -->
+    <main class="stage-board">
       <div class="board-head">
         <span class="b-name">{{ s.board.name }}</span>
         <span class="b-tag">{{ s.board.tagline }}</span>
       </div>
       <div class="board-desc">{{ s.board.description }}</div>
 
-      {% if s.reports %}
-      <div class="rank-cards">
+      <ol class="rank-rows">
         {% for r in s.reports %}
-        <a class="rank-card {% if loop.index == 1 %}medal-1{% elif loop.index == 2 %}medal-2{% elif loop.index == 3 %}medal-3{% endif %}"
-           href="/report/{{ r.id }}">
-          <div class="topline">
-            <span class="rank-no">
+        <li class="rank-row {% if loop.index == 1 %}medal-1{% elif loop.index == 2 %}medal-2{% elif loop.index == 3 %}medal-3{% endif %}">
+          <a href="/report/{{ r.id }}" class="rank-row-link">
+            <span class="row-medal">
               {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% elif loop.index == 3 %}🥉{% endif %}
-              {{ loop.index }}
             </span>
-            <span class="status-badge {{ r.status }}">{{ r.status_label }}</span>
-          </div>
-          <div class="r-title">{{ r.title }}</div>
-          <div class="r-who">{{ r.who }}</div>
-          <div class="r-foot">
-            <span>围观 <span class="r-heat" data-count="{{ r.heat }}">{{ r.heat }}</span></span>
-            <span>点我看原因 →</span>
-          </div>
-        </a>
+            <span class="row-rank no">{{ loop.index }}</span>
+            <span class="row-main">
+              <span class="row-title">{{ r.title }}</span>
+              <span class="row-who">{{ r.who }}</span>
+            </span>
+            <span class="row-side">
+              <span class="row-heat">👀 <span data-count="{{ r.heat }}">{{ r.heat }}</span></span>
+              <span class="row-go">看原因 →</span>
+            </span>
+          </a>
+        </li>
+        {% else %}
+        <li class="rank-row-empty">本榜虚位以待，暂时空着。</li>
         {% endfor %}
+      </ol>
+    </main>
+
+    <!-- 右：献唱歌声 -->
+    <aside class="stage-side">
+      <div class="side-title">🎤 献唱 · 之二</div>
+      {% if videos[1] %}
+      <div class="video-item side-video">
+        <video id="v-right" src="{{ videos[1].url }}" preload="metadata" loop playsinline></video>
+        <div class="v-title"><span>{{ videos[1].name }}</span><span class="video-pill">点击播放</span></div>
       </div>
       {% else %}
-      <div style="color:var(--muted);padding:10px 0">本榜虚位以待，暂时空着。</div>
+      <div class="side-empty">（未找到视频素材）</div>
       {% endif %}
-    </section>
-    {% endfor %}
+      <div class="side-note">一左一右，轮流献唱，榜上皆英雄。</div>
+    </aside>
   </div>
-  {% endif %}
-
-  {% if videos %}
-  <section class="karaoke">
-    <h2>🎤 献唱点歌台</h2>
-    <div class="k-sub">继承原版程序的唱歌视频彩蛋 —— 想给哪位英雄献唱，点开播放。</div>
-    <div class="video-row">
-      {% for v in videos %}
-      <div class="video-item">
-        <video src="{{ v.url }}" preload="metadata" loop playsinline controls></video>
-        <div class="v-title">
-          <span>{{ v.name }}</span>
-          <span class="video-pill">点击播放</span>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-  </section>
-  {% endif %}
+  {% endfor %}
 </div>
 
 {% if show_terms %}
