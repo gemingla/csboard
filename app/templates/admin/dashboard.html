@@ -50,6 +50,18 @@
   <div style="color:var(--muted);padding:8px 0">队列空空，岁月静好。</div>
   {% endif %}
 
+  <div class="section-title">➕ 快速添加榜单成员</div>
+  <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
+    <form class="inline-form" method="post" action="/admin/reports/add" style="flex:1;min-width:520px">
+      <input type="text" name="title" placeholder="标题：年度好人 · 张三" required style="flex:2">
+      <input type="text" name="who" placeholder="姓名" style="flex:1">
+      <input type="text" name="reason" placeholder="上榜原因（一句话）" required style="flex:3">
+      <input type="text" name="heat" placeholder="围观指数（可选）" style="width:110px">
+      <button class="btn small" type="submit">添加</button>
+    </form>
+    <a class="btn secondary small" href="/admin/reports">完整表单 →</a>
+  </div>
+
   <div class="section-title">📋 最近提交（全部状态）</div>
   <table class="table">
     <thead><tr><th>#</th><th>标题</th><th>状态</th><th>围观</th><th>提交时间</th></tr></thead>

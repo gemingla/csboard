@@ -5,21 +5,59 @@
 {% block content %}
 <div class="admin-wrap">
   <div class="page-head">
-    <h1>案件管理</h1>
+    <h1>榜单管理</h1>
     <div class="sub">
       <a href="/admin/">工作台</a> ·
       筛选：
       <a href="/admin/reports">全部</a> /
-      <a href="/admin/reports?status=pending">待审核</a> /
       <a href="/admin/reports?status=approved">已公示</a> /
-      <a href="/admin/reports?status=processed">已处理</a> /
-      <a href="/admin/reports?status=transferred">已转交</a> /
-      <a href="/admin/reports?status=rejected">已驳回</a>
+      <a href="/admin/reports?status=processed">已处理</a>
     </div>
   </div>
 
+  <div class="section-title">＋ 添加榜单成员（填表即上墙）</div>
+  <form class="form-card" method="post" action="/admin/reports/add">
+    <div class="field">
+      <label>标题 <span class="req">*</span></label>
+      <input type="text" name="title" maxlength="120" required placeholder="例如：年度好人 · 张三">
+    </div>
+    <div class="field">
+      <label>姓名 / 称号</label>
+      <input type="text" name="who" maxlength="80" placeholder="例如：张三">
+      <div class="hint">上墙显示的称呼，可留空（默认：匿名）。</div>
+    </div>
+    <div class="field">
+      <label>上榜原因 / 事迹 <span class="req">*</span></label>
+      <textarea name="reason" required placeholder="为什么上榜？做了什么好事？"></textarea>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px" class="add-row2">
+      <div class="field">
+        <label>围观指数（可选）</label>
+        <input type="text" name="heat" placeholder="留空 = 0；可填大量级数字彩蛋">
+      </div>
+      <div class="field">
+        <label>榜单</label>
+        <select name="board">
+          {% for b in boards %}<option value="{{ b.slug }}">{{ b.name }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px" class="add-row2">
+      <div class="field">
+        <label>时间（可选）</label>
+        <input type="text" name="happened_at" maxlength="40" placeholder="例如：2024 年度">
+      </div>
+      <div class="field">
+        <label>地点（可选）</label>
+        <input type="text" name="location" maxlength="120" placeholder="例如：高一（3）班">
+      </div>
+    </div>
+    <button class="btn" type="submit">＋ 添加并上榜</button>
+  </form>
+
+  <div class="section-title">📋 全部条目</div>
   <table class="table">
-    <thead><tr><th>#</th><th>标题</th><th>对象特征</th><th>榜单</th><th>状态</th><th>围观</th><th>操作</th></tr></thead>
+    <thead><tr><th>#</th><th>标题</th><th>姓名</th><th>榜单</th><th>状态</th><th>围观</th><th>操作</th></tr></thead>
     <tbody>
       {% for r in reports %}
       <tr>
@@ -30,30 +68,21 @@
         <td><span class="status-badge {{ r.status }}">{{ r.status_label }}</span></td>
         <td>{{ r.heat }}</td>
         <td class="ops">
-          {% if r.status != 'approved' and r.status != 'processed' %}
-          <form class="inline-form" method="post" action="/admin/report/{{ r.id }}/approve">
-            <button class="btn small ok" type="submit">通过</button>
-          </form>
-          {% endif %}
           {% if r.status != 'processed' %}
           <form class="inline-form" method="post" action="/admin/report/{{ r.id }}/process" data-confirm="登记处理结果？该条目将标记为已处理。">
-            <input type="text" name="result" placeholder="处理结果（如：已约谈/已道歉）" required>
+            <input type="text" name="result" placeholder="处理结果（可选）">
             <button class="btn small" type="submit">处理</button>
           </form>
           {% endif %}
-          {% if r.status == 'pending' %}
-          <form class="inline-form" method="post" action="/admin/report/{{ r.id }}/transfer">
-            <button class="btn small info" type="submit">转交</button>
+          <form class="inline-form" method="post" action="/admin/report/{{ r.id }}/delete" data-confirm="确定删除「{{ r.title }}」？删除后不可恢复。">
+            <button class="btn small danger" type="submit">删除</button>
           </form>
-          <form class="inline-form" method="post" action="/admin/report/{{ r.id }}/reject" data-confirm="确定驳回？">
-            <input type="text" name="reason" placeholder="驳回理由">
-            <button class="btn small danger" type="submit">驳回</button>
-          </form>
-          {% endif %}
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="7" style="color:var(--muted);text-align:center;padding:20px">没有符合条件的记录。</td></tr>
+      <tr><td colspan="7" style="color:var(--muted);text-align:center;padding:20px">
+        榜单暂时空着 —— 用上方表单添加第一位上榜成员吧 🏆
+      </td></tr>
       {% endfor %}
     </tbody>
   </table>

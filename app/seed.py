@@ -1,10 +1,9 @@
 """种子数据（幂等：已存在则跳过）。
 
-v0.1.1 内容：
-1. 榜单：仅「好人榜」（继承 exe 灵感；曝光榜与反馈功能已按要求移除）
-2. 好人榜 7 人（原版程序数据迁移，围观指数 = 原分数，保留“大数”梗）
-3. 管理员账号：admin / admin123456（可用环境变量覆盖，见 config.DEFAULT_ADMIN）
-4. 视频素材：迁移 yt.mp4 / 闫涛10.mp4 到 data/media（左右轮流播放用）
+v0.1.2 内容：
+1. 榜单：仅「好人榜」空榜（不预置人物 —— 榜单成员由管理员在管理台自行添加）
+2. 管理员账号：admin / admin123456（可用环境变量覆盖，见 config.DEFAULT_ADMIN）
+3. 视频素材：迁移 yt.mp4 / 闫涛10.mp4 到 data/media（左右轮流播放用）
 """
 from __future__ import annotations
 
@@ -15,18 +14,8 @@ from sqlalchemy import select
 
 from .config import DEFAULT_ADMIN, MEDIA_DIR
 from .database import SessionLocal
-from .models import Admin, Board, Report
+from .models import Admin, Board
 from .security import hash_password
-
-_HONOR_DATA = [
-    ("周稳", 999999999999999),
-    ("叶佩剑", 999999999999998),
-    ("章蕾", 111111111111119),
-    ("周怡", 111111111),
-    ("熊志远", 5000),
-    ("赵志成", 3000),
-    ("卞美玲", 300),
-]
 
 _VIDEOS = ["yt.mp4", "闫涛10.mp4"]
 
@@ -67,19 +56,6 @@ def _seed_boards(db) -> None:
         sort_order=0,
     )
     db.add(honor)
-    db.commit()
-
-    for name, heat in _HONOR_DATA:
-        db.add(Report(
-            board_id=honor.id,
-            title=f"年度好人 · {name}",
-            who=name,
-            reason="原版《好人榜 1.2》年度上榜人物。"
-                   "本条目为历史数据迁移，详细事迹与颁奖词将在 v0.3 揭榜仪式中展开。",
-            happened_at="2023-2024 年度",
-            heat=heat,
-            status=Report.STATUS_APPROVED,
-        ))
     db.commit()
 
 

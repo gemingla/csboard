@@ -476,6 +476,7 @@ table.table {
   .topnav { margin-left: 0; }
   .page-head h1 { font-size: 26px; }
   .detail-card { padding: 20px 16px; }
+  .add-row2 { grid-template-columns: 1fr !important; }
 }
 
 /* ---------- 闪现消息 ---------- */

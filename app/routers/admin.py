@@ -9,7 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import Admin, Log, Report
+from ..models import Admin, Board, Log, Report
 from ..security import current_admin, verify_password
 
 router = APIRouter(prefix="/admin")
@@ -89,7 +89,65 @@ def reports_page(request: Request, db: Annotated[Session, Depends(get_db)],
     if status:
         stmt = stmt.where(Report.status == status)
     reports = db.scalars(stmt).all()
-    return _tpl(request, "admin/reports.html", admin=admin, reports=reports, cur=status)
+    boards = db.scalars(select(Board).where(Board.is_active == True).order_by(Board.sort_order)).all()  # noqa: E712
+    return _tpl(request, "admin/reports.html", admin=admin, reports=reports,
+                cur=status, boards=boards, error=None)
+
+
+@router.post("/reports/add")
+def add_report(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    title: Annotated[str, Form()],
+    who: Annotated[str, Form()] = "",
+    reason: Annotated[str, Form()] = "",
+    heat: Annotated[str, Form()] = "0",
+    happened_at: Annotated[str, Form()] = "",
+    location: Annotated[str, Form()] = "",
+    board: Annotated[str, Form()] = "",
+):
+    """管理员直接添加榜单成员：填表即上墙（status=approved，无需审核）。"""
+    admin = current_admin(request, db)
+    if admin is None:
+        return RedirectResponse("/admin/login", status_code=303)
+    board_obj = db.scalar(select(Board).where(Board.slug == board)) if board else \
+        db.scalar(select(Board).order_by(Board.sort_order).limit(1))
+    if board_obj is None:
+        return RedirectResponse("/admin/reports", status_code=303)
+    try:
+        heat_val = max(0, int(heat or 0))
+    except ValueError:
+        heat_val = 0
+    report = Report(
+        board_id=board_obj.id,
+        title=(title or "未命名人物")[:120],
+        who=(who or "匿名")[:80],
+        reason=reason,
+        heat=heat_val,
+        happened_at=happened_at[:40],
+        location=location[:120],
+        status=Report.STATUS_APPROVED,
+    )
+    db.add(report)
+    _log(db, admin, "add", target=Report, detail=f"添加榜单成员: {report.title}")
+    db.commit()
+    db.refresh(report)
+    return RedirectResponse(f"/report/{report.id}?admin_added=1", status_code=303)
+
+
+@router.post("/report/{report_id}/delete")
+def delete_report(report_id: int, request: Request, db: Annotated[Session, Depends(get_db)]):
+    """删除榜单条目（留痕）。"""
+    admin = current_admin(request, db)
+    if admin is None:
+        return RedirectResponse("/admin/login", status_code=303)
+    report = db.get(Report, report_id)
+    if report is not None:
+        _log(db, admin, "delete", target=Report, target_id=report_id,
+             detail=f"删除条目: {report.title}")
+        db.delete(report)
+    db.commit()
+    return RedirectResponse("/admin/reports", status_code=303)
 
 
 def _apply_status(request: Request, db: Session, report_id: int, new_status: str, detail: str = "") -> RedirectResponse:
