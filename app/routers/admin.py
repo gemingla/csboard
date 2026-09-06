@@ -1,0 +1,142 @@
+"""管理员路由：登录、工作台、审核队列、案件处理、操作日志。"""
+from __future__ import annotations
+
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Form, Request
+from fastapi.responses import RedirectResponse
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
+from ..database import get_db
+from ..models import Admin, Log, Report
+from ..security import current_admin, verify_password
+
+router = APIRouter(prefix="/admin")
+
+
+def _tpl(request: Request, name: str, **ctx):
+    return request.app.state.templates.TemplateResponse(
+        request=request, name=name,
+        context={"app_name": request.app.state.app_name,
+                 "motto": request.app.state.motto, **ctx},
+    )
+
+
+def _log(db: Session, admin: Admin | None, action: str, target: type | None = None,
+         target_id: int | None = None, detail: str = "") -> None:
+    """写入管理员操作日志（留痕）。"""
+    db.add(Log(admin_id=admin.id if admin else None,
+               admin_name=admin.username if admin else "系统",
+               action=action,
+               target_type=target.__name__ if target else "",
+               target_id=target_id, detail=detail))
+
+
+@router.get("/login")
+def login_page(request: Request):
+    return _tpl(request, "admin/login.html", error=None)
+
+
+@router.post("/login")
+def login(request: Request, db: Annotated[Session, Depends(get_db)],
+          username: Annotated[str, Form()], password: Annotated[str, Form()]):
+    admin = db.scalar(select(Admin).where(Admin.username == username))
+    if admin and verify_password(password, admin.password_hash):
+        request.session["admin_id"] = admin.id
+        _log(db, admin, "login", detail="管理员登录")
+        db.commit()
+        return RedirectResponse("/admin/", status_code=303)
+    return _tpl(request, "admin/login.html", error="用户名或密码错误")
+
+
+@router.get("/logout")
+def logout(request: Request):
+    request.session.clear()
+    return RedirectResponse("/admin/login", status_code=303)
+
+
+@router.get("/")
+def dashboard(request: Request, db: Annotated[Session, Depends(get_db)]):
+    admin = current_admin(request, db)
+    if admin is None:
+        return RedirectResponse("/admin/login", status_code=303)
+    stats = {
+        "pending": db.scalar(select(func.count()).select_from(Report).where(Report.status == Report.STATUS_PENDING)) or 0,
+        "approved": db.scalar(select(func.count()).select_from(Report).where(Report.status == Report.STATUS_APPROVED)) or 0,
+        "processed": db.scalar(select(func.count()).select_from(Report).where(Report.status == Report.STATUS_PROCESSED)) or 0,
+        "rejected": db.scalar(select(func.count()).select_from(Report).where(Report.status == Report.STATUS_REJECTED)) or 0,
+        "transferred": db.scalar(select(func.count()).select_from(Report).where(Report.status == Report.STATUS_TRANSFERRED)) or 0,
+        "heat": db.scalar(select(func.coalesce(func.sum(Report.heat), 0))) or 0,
+    }
+    pending = db.scalars(
+        select(Report).where(Report.status == Report.STATUS_PENDING).order_by(Report.created_at.desc())
+    ).all()
+    recent = db.scalars(
+        select(Report).order_by(Report.created_at.desc()).limit(12)
+    ).all()
+    return _tpl(request, "admin/dashboard.html", admin=admin, stats=stats,
+                pending=pending, recent=recent)
+
+
+@router.get("/reports")
+def reports_page(request: Request, db: Annotated[Session, Depends(get_db)],
+                 status: str = ""):
+    admin = current_admin(request, db)
+    if admin is None:
+        return RedirectResponse("/admin/login", status_code=303)
+    stmt = select(Report).order_by(Report.created_at.desc())
+    if status:
+        stmt = stmt.where(Report.status == status)
+    reports = db.scalars(stmt).all()
+    return _tpl(request, "admin/reports.html", admin=admin, reports=reports, cur=status)
+
+
+def _apply_status(request: Request, db: Session, report_id: int, new_status: str, detail: str = "") -> RedirectResponse:
+    admin = current_admin(request, db)
+    if admin is None:
+        return RedirectResponse("/admin/login", status_code=303)
+    report = db.get(Report, report_id)
+    if report is None:
+        return RedirectResponse("/admin/reports", status_code=303)
+    report.status = new_status
+    if new_status == Report.STATUS_REJECTED:
+        report.reject_reason = detail
+    if new_status == Report.STATUS_PROCESSED:
+        report.process_result = detail
+    _log(db, admin, new_status if new_status != Report.STATUS_PROCESSED else "process",
+         target=Report, target_id=report.id, detail=detail or "（无备注）")
+    db.commit()
+    return RedirectResponse("/admin/reports", status_code=303)
+
+
+@router.post("/report/{report_id}/approve")
+def approve(report_id: int, request: Request, db: Annotated[Session, Depends(get_db)]):
+    return _apply_status(request, db, report_id, Report.STATUS_APPROVED, "审核通过，允许上墙公示")
+
+
+@router.post("/report/{report_id}/reject")
+def reject(report_id: int, request: Request, db: Annotated[Session, Depends(get_db)],
+           reason: Annotated[str, Form()] = ""):
+    return _apply_status(request, db, report_id, Report.STATUS_REJECTED, reason or "未说明")
+
+
+@router.post("/report/{report_id}/transfer")
+def transfer(report_id: int, request: Request, db: Annotated[Session, Depends(get_db)],
+             reason: Annotated[str, Form()] = ""):
+    return _apply_status(request, db, report_id, Report.STATUS_TRANSFERRED, reason or "已转交相关部门")
+
+
+@router.post("/report/{report_id}/process")
+def process(report_id: int, request: Request, db: Annotated[Session, Depends(get_db)],
+            result: Annotated[str, Form()]):
+    return _apply_status(request, db, report_id, Report.STATUS_PROCESSED, result)
+
+
+@router.get("/logs")
+def logs_page(request: Request, db: Annotated[Session, Depends(get_db)]):
+    admin = current_admin(request, db)
+    if admin is None:
+        return RedirectResponse("/admin/login", status_code=303)
+    logs = db.scalars(select(Log).order_by(Log.created_at.desc()).limit(200)).all()
+    return _tpl(request, "admin/logs.html", admin=admin, logs=logs)

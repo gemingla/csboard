@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}关于 · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container detail-wrap">
+  <div class="detail-card">
+    <h1>关于 &amp; 彩蛋</h1>
+    <div class="detail-heat">本应用由原版《好人榜 1.2》程序（tkinter + PyInstaller）重制为 Web 系统。</div>
+
+    <div class="detail-reason">
+      <div class="label">📖 来历</div>
+      <div class="body">原版程序：感动中国 2023-2024 年度人物排行榜（作者：3605268328）。
+        我们继承它的全部灵魂——搞笑榜单、唱歌视频、“不告老师法则”条款、土味大数分数——
+        用更现代的方式让它继续运转。</div>
+    </div>
+
+    <div class="detail-reason">
+      <div class="label">🔍 彩蛋（试试看）</div>
+      <div class="body">在键盘上依次输入 <b>B E A S T</b>，看看会发生什么；<br>
+        在地址栏输入 <b>/report/1</b>，见证“年度好人”的诞生。</div>
+    </div>
+  </div>
+</div>
+{% endblock %}

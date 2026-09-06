@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+  <div class="page-head">
+    <h1>年度榜 · 点进去，看原因</h1>
+    <div class="sub">{{ motto }} —— 一榜一故事，好事上金榜，坏事吃曝光。</div>
+  </div>
+
+  {% if sections %}
+  <div class="boards-grid">
+    {% for s in sections %}
+    <section class="board-section">
+      <div class="board-head">
+        <span class="b-name">{{ s.board.name }}</span>
+        <span class="b-tag">{{ s.board.tagline }}</span>
+      </div>
+      <div class="board-desc">{{ s.board.description }}</div>
+
+      {% if s.reports %}
+      <div class="rank-cards">
+        {% for r in s.reports %}
+        <a class="rank-card {% if loop.index == 1 %}medal-1{% elif loop.index == 2 %}medal-2{% elif loop.index == 3 %}medal-3{% endif %}"
+           href="/report/{{ r.id }}">
+          <div class="topline">
+            <span class="rank-no">
+              {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% elif loop.index == 3 %}🥉{% endif %}
+              {{ loop.index }}
+            </span>
+            <span class="status-badge {{ r.status }}">{{ r.status_label }}</span>
+          </div>
+          <div class="r-title">{{ r.title }}</div>
+          <div class="r-who">{{ r.who }}</div>
+          <div class="r-foot">
+            <span>围观 <span class="r-heat" data-count="{{ r.heat }}">{{ r.heat }}</span></span>
+            <span>点我看原因 →</span>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div style="color:var(--muted);padding:10px 0">本榜虚位以待，暂时空着。</div>
+      {% endif %}
+    </section>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if videos %}
+  <section class="karaoke">
+    <h2>🎤 献唱点歌台</h2>
+    <div class="k-sub">继承原版程序的唱歌视频彩蛋 —— 想给哪位英雄献唱，点开播放。</div>
+    <div class="video-row">
+      {% for v in videos %}
+      <div class="video-item">
+        <video src="{{ v.url }}" preload="metadata" loop playsinline controls></video>
+        <div class="v-title">
+          <span>{{ v.name }}</span>
+          <span class="video-pill">点击播放</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</div>
+
+{% if show_terms %}
+<div class="terms-overlay" id="terms-overlay">
+  <div class="terms-box">
+    <h3>进 场 条 款</h3>
+    <div class="stamp">— 章 —— 不告老师法则 —</div>
+    <pre>{{ terms_text }}</pre>
+    <div class="terms-actions">
+      <form method="post" action="/terms/accept" style="margin:0">
+        <button class="btn" type="submit">点接受，进场 🚪</button>
+      </form>
+      <button class="btn secondary" type="button" id="terms-reject">不接受</button>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

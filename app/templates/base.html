@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ app_name }}{% endblock %}</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%86%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="/">
+        <span class="name">畜牲榜</span>
+        <span class="badge">BeastBoard</span>
+      </a>
+      <nav class="topnav">
+        <a href="/" class="{% if active_slug is none and not admin %}active{% endif %}">首页</a>
+        <a href="/board/honor" class="{% if active_slug == 'honor' %}active{% endif %}">好人榜</a>
+        <a href="/board/exposed" class="{% if active_slug == 'exposed' %}active{% endif %}">曝光榜</a>
+        <a href="/submit">匿名反映</a>
+        {% if admin %}<a href="/admin/">管理台</a>{% endif %}
+      </nav>
+    </div>
+  </header>
+
+  {% block content %}{% endblock %}
+
+  <footer class="footer">
+    <div>{{ app_name }} v{{ version | default('0.1.0') }} · {{ motto }}<br>
+      匿名反映只描述行为，不公开实名；<a href="/about">关于 &amp; 彩蛋</a>
+    </div>
+  </footer>
+
+  <script src="/static/js/app.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

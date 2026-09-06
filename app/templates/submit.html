@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}匿名反映 · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="page-head">
+    <h1>匿名反映</h1>
+    <div class="sub">把该被看见的事交上来 —— 只描述行为，不写实名。审核通过后上曝光榜。</div>
+  </div>
+
+  <form class="form-card" method="post" action="/submit">
+    <div class="field">
+      <label>事件标题 <span class="req">*</span></label>
+      <input type="text" name="title" maxlength="120" required
+             placeholder="例如：晚自习后的球场灯光骚扰">
+      <div class="hint">一句话说明发生了什么，越具体越容易被采纳。</div>
+    </div>
+
+    <div class="field">
+      <label>对象特征描述（可选）</label>
+      <input type="text" name="who" maxlength="80" placeholder="例如：某同学，常穿白色球鞋 / 匿名">
+      <div class="hint">只写特征（班级、昵称、外形），<b>禁止填写姓名、身份证号、照片等可识别个人的信息</b>——这是本榜的合规红线。</div>
+    </div>
+
+    <div class="field">
+      <label>上榜原因 / 事件经过 <span class="req">*</span></label>
+      <textarea name="reason" required
+                placeholder="什么时间？什么地点？发生了什么？影响是什么？"></textarea>
+    </div>
+
+    <div class="field">
+      <label>地点（可选）</label>
+      <input type="text" name="location" maxlength="120" placeholder="例如：教学楼 3 层男厕">
+    </div>
+
+    <div class="field">
+      <label>时间（可选）</label>
+      <input type="text" name="happened_at" maxlength="40" placeholder="例如：2025 年 9 月起，每周六晚">
+    </div>
+
+    <div class="field">
+      <label>投递榜单</label>
+      <select name="board">
+        <option value="exposed">曝光榜（校园文明反馈）</option>
+        <option value="honor">好人榜（感谢 / 提名事迹）</option>
+      </select>
+    </div>
+
+    <button class="btn" type="submit">提交匿名反映 🕊️</button>
+    <div class="hint" style="margin-top:10px">提交即进入管理员审核队列；处理结果会在详情页公示。</div>
+  </form>
+</div>
+{% endblock %}

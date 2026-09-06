@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}操作日志 · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="admin-wrap">
+  <div class="page-head">
+    <h1>操作日志</h1>
+    <div class="sub"><a href="/admin/">返回工作台</a></div>
+  </div>
+
+  <ul class="log-list">
+    {% for log in logs %}
+    <li>
+      <span class="time">{{ log.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+      <span><b style="color:var(--text)">{{ log.admin_name }}</b>
+        · {{ log.action }}
+        {% if log.target_id %}· #{{ log.target_id }}{% endif %}
+        · {{ log.detail }}</span>
+    </li>
+    {% else %}
+    <li style="color:var(--muted)">暂无日志。</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

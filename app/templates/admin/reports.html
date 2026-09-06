@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}案件管理 · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="admin-wrap">
+  <div class="page-head">
+    <h1>案件管理</h1>
+    <div class="sub">
+      <a href="/admin/">工作台</a> ·
+      筛选：
+      <a href="/admin/reports">全部</a> /
+      <a href="/admin/reports?status=pending">待审核</a> /
+      <a href="/admin/reports?status=approved">已公示</a> /
+      <a href="/admin/reports?status=processed">已处理</a> /
+      <a href="/admin/reports?status=transferred">已转交</a> /
+      <a href="/admin/reports?status=rejected">已驳回</a>
+    </div>
+  </div>
+
+  <table class="table">
+    <thead><tr><th>#</th><th>标题</th><th>对象特征</th><th>榜单</th><th>状态</th><th>围观</th><th>操作</th></tr></thead>
+    <tbody>
+      {% for r in reports %}
+      <tr>
+        <td>{{ r.id }}</td>
+        <td><a href="/report/{{ r.id }}" target="_blank">{{ r.title }}</a></td>
+        <td>{{ r.who }}</td>
+        <td>{{ r.board.name }}</td>
+        <td><span class="status-badge {{ r.status }}">{{ r.status_label }}</span></td>
+        <td>{{ r.heat }}</td>
+        <td class="ops">
+          {% if r.status != 'approved' and r.status != 'processed' %}
+          <form class="inline-form" method="post" action="/admin/report/{{ r.id }}/approve">
+            <button class="btn small ok" type="submit">通过</button>
+          </form>
+          {% endif %}
+          {% if r.status != 'processed' %}
+          <form class="inline-form" method="post" action="/admin/report/{{ r.id }}/process" data-confirm="登记处理结果？该条目将标记为已处理。">
+            <input type="text" name="result" placeholder="处理结果（如：已约谈/已道歉）" required>
+            <button class="btn small" type="submit">处理</button>
+          </form>
+          {% endif %}
+          {% if r.status == 'pending' %}
+          <form class="inline-form" method="post" action="/admin/report/{{ r.id }}/transfer">
+            <button class="btn small info" type="submit">转交</button>
+          </form>
+          <form class="inline-form" method="post" action="/admin/report/{{ r.id }}/reject" data-confirm="确定驳回？">
+            <input type="text" name="reason" placeholder="驳回理由">
+            <button class="btn small danger" type="submit">驳回</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" style="color:var(--muted);text-align:center;padding:20px">没有符合条件的记录。</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

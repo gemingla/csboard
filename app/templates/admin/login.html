@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}管理员登录 · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="page-head">
+    <h1>管理员入口</h1>
+    <div class="sub">本系统后台 · 登录后进入审核工作台</div>
+  </div>
+
+  <form class="form-card" method="post" action="/admin/login">
+    {% if error %}
+    <div class="flash" style="position:static;margin-bottom:14px">{{ error }}</div>
+    {% endif %}
+    <div class="field">
+      <label>用户名</label>
+      <input type="text" name="username" autocomplete="username" required>
+    </div>
+    <div class="field">
+      <label>密码</label>
+      <input type="password" name="password" autocomplete="current-password" required>
+    </div>
+    <button class="btn" type="submit">登 录</button>
+  </form>
+</div>
+{% endblock %}

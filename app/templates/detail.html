@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}{{ report.title }} · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container detail-wrap">
+  {% if request.query_params.get('submitted') %}
+  <div class="flash">✅ 已收到你的提交！管理员审核通过后会公示上榜。</div>
+  {% endif %}
+
+  <div class="detail-card">
+    <span class="status-badge {{ report.status }}">{{ report.status_label }}</span>
+    <h1>{{ report.title }}</h1>
+    <div class="detail-heat">
+      🔥 围观指数 <span data-count="{{ report.heat }}" id="heat">{{ report.heat }}</span>
+      <span id="heat" style="color:var(--dim)">· 越看越热闹</span>
+    </div>
+
+    <div class="detail-meta">
+      <div class="meta-item"><div class="k">上榜对象（特征描述，无实名）</div><div class="v">{{ report.who }}</div></div>
+      {% if report.happened_at %}<div class="meta-item"><div class="k">时间</div><div class="v">{{ report.happened_at }}</div></div>{% endif %}
+      {% if report.location %}<div class="meta-item"><div class="k">地点</div><div class="v">{{ report.location }}</div></div>{% endif %}
+      <div class="meta-item"><div class="k">所属榜单</div><div class="v">{{ report.board.name }}</div></div>
+    </div>
+
+    <div class="detail-reason">
+      <div class="label">📜 上榜原因</div>
+      <div class="body">{{ report.reason }}</div>
+    </div>
+
+    {% if evidence %}
+    <div class="detail-reason">
+      <div class="label">📎 证据</div>
+      {% for e in evidence %}<div style="margin:6px 0">{{ e }}</div>{% endfor %}
+    </div>
+    {% endif %}
+
+    {% if report.status == 'processed' and report.process_result %}
+    <div class="process-box">
+      <div class="label">✅ 处理结果</div>
+      <div>{{ report.process_result }}</div>
+    </div>
+    {% endif %}
+
+    {% if report.status == 'rejected' and report.reject_reason %}
+    <div class="reject-box">
+      <div class="label">⛔ 驳回说明</div>
+      <div>{{ report.reject_reason }}</div>
+    </div>
+    {% endif %}
+
+    {% if report.status == 'transferred' %}
+    <div class="process-box" style="border-color:#4c9aff55;background:#4c9aff12">
+      <div class="label" style="color:var(--info)">📮 已转交</div>
+      <div>{{ report.process_result or '本事件已转交学校相关部门处理。' }}</div>
+    </div>
+    {% endif %}
+
+    <form method="post" action="/report/{{ report.id }}/heat" style="margin-top:18px">
+      <button class="heat-btn" type="submit">👀 顶一下 (围观 +1)</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
