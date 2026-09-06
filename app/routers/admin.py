@@ -132,7 +132,8 @@ def add_report(
     _log(db, admin, "add", target=Report, detail=f"添加榜单成员: {report.title}")
     db.commit()
     db.refresh(report)
-    return RedirectResponse(f"/report/{report.id}?admin_added=1", status_code=303)
+    # 停留在管理后台（榜单管理页），便于管理员连续添加
+    return RedirectResponse("/admin/reports", status_code=303)
 
 
 @router.post("/report/{report_id}/delete")
