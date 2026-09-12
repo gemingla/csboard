@@ -313,28 +313,94 @@ def move_report(report_id: int, request: Request, db: Annotated[Session, Depends
 
 
 # ---------------------------------------------------------------- 批量导入
+ENCODINGS = ("utf-8-sig", "utf-8", "gb18030", "big5")
+
+
+def _decode_payload(raw: bytes) -> str:
+    """按 utf-8-sig → utf-8 → gb18030 → big5 依次探测解码。
+
+    Excel 中文版导出的 CSV 通常是 GBK/ANSI 编码，若只按 UTF-8 解码会整列乱码。
+    """
+    for enc in ENCODINGS:
+        try:
+            text = raw.decode(enc)
+        except UnicodeDecodeError:
+            continue
+        if "\ufffd" not in text:
+            return text
+    return raw.decode("utf-8", errors="replace")
+
+
+def _split_csv_line(line: str, sep: str) -> list[str]:
+    """按标准 CSV 规则切分单行：支持双引号包裹（引号内分隔符不分割、"" 表示一个引号）。"""
+    if '"' not in line:
+        return [p.strip() for p in line.split(sep)]
+    fields: list[str] = []
+    buf: list[str] = []
+    in_quote = False
+    i = 0
+    while i < len(line):
+        ch = line[i]
+        if in_quote:
+            if ch == '"':
+                if i + 1 < len(line) and line[i + 1] == '"':
+                    buf.append('"')
+                    i += 2
+                    continue
+                in_quote = False
+                i += 1
+                continue
+            buf.append(ch)
+            i += 1
+            continue
+        if ch == '"':
+            in_quote = True
+            i += 1
+            continue
+        if ch == sep:
+            fields.append("".join(buf).strip())
+            buf = []
+            i += 1
+            continue
+        buf.append(ch)
+        i += 1
+    fields.append("".join(buf).strip())
+    return fields
+
+
+def _split_line(line: str) -> list[str]:
+    """选择分隔符切分一行：制表符 > 英文逗号（走 CSV 引号规则）> 中文逗号 / 竖线。"""
+    if "\t" in line:
+        return _split_csv_line(line, "\t")
+    if "," in line:
+        return _split_csv_line(line, ",")
+    for sep in ("，", "|"):
+        if sep in line:
+            return [p.strip() for p in line.split(sep)]
+    return [line.strip()]
+
+
 def _parse_import_text(text: str) -> list[dict]:
-    """解析批量导入文本：每行「姓名[,事迹[,指数]]」，支持逗号/中文逗号/制表符/竖线分隔，
-    以 # 开头的行为注释，首行含“姓名”表头时自动跳过。"""
+    """解析批量导入文本：每行「姓名[,事迹[,指数]]」。
+
+    - 分隔符：制表符 / 英文逗号 / 中文逗号 / 竖线（可直接从 Excel 粘贴）
+    - 支持 CSV 引号包裹字段；首行「姓名」表头自动跳过；# 开头的行是注释
+    """
     rows: list[dict] = []
     for raw in text.splitlines():
-        line = raw.strip()
+        line = raw.strip().lstrip("\ufeff")
         if not line or line.startswith("#"):
             continue
-        parts = None
-        for sep in ("\t", ",", "，", "|"):
-            if sep in line:
-                parts = [p.strip() for p in line.split(sep)]
-                break
-        if parts is None:
-            parts = [line]
-        who = (parts[0] or "").strip()
+        parts = _split_line(line)
+        who = (parts[0] or "").strip().strip('"').strip()
         if not who:
             continue
         if who in ("姓名", "名字", "who", "name"):
             continue
         reason = parts[1].strip() if len(parts) > 1 else ""
         heat_raw = parts[2].strip() if len(parts) > 2 else "0"
+        # 指数容错：允许 "1,234" 这类千分位写法
+        heat_raw = heat_raw.replace(",", "").replace("，", "").strip()
         try:
             heat_val = max(0, int(heat_raw or 0))
         except ValueError:
@@ -348,7 +414,7 @@ def import_page(request: Request, db: Annotated[Session, Depends(get_db)]):
     admin = current_admin(request, db)
     if admin is None:
         return RedirectResponse("/admin/login", status_code=303)
-    return _tpl(request, "admin/import.html", admin=admin, cur_page="reports", error=None)
+    return _tpl(request, "admin/import.html", admin=admin, cur_page="import", error=None)
 
 
 @router.post("/import")
@@ -369,7 +435,7 @@ def import_do(
     payload = ""
     if csv_file is not None and csv_file.filename:
         try:
-            payload = csv_file.file.read().decode("utf-8-sig", errors="replace")
+            payload = _decode_payload(csv_file.file.read())
         except Exception:
             payload = ""
     if not payload.strip():
@@ -377,7 +443,7 @@ def import_do(
 
     rows = _parse_import_text(payload)
     if not rows:
-        return _tpl(request, "admin/import.html", admin=admin, cur_page="reports",
+        return _tpl(request, "admin/import.html", admin=admin, cur_page="import",
                     error="没有解析到任何有效行。请检查格式：每行「姓名,事迹,指数」。")
 
     order = _next_sort_order(db) - 10
