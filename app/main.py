@@ -17,6 +17,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from . import config
 from .database import Base, engine
+from .migrate import run_migrations
 from .routers import admin, public
 from .seed import run_seed
 
@@ -41,8 +42,9 @@ app.include_router(admin.router)
 
 @app.on_event("startup")
 def _startup() -> None:
-    """建表 + 种子数据（幂等：仅首次运行写入）。"""
+    """建表 + 迁移（加列/品牌同步）+ 种子数据（全部幂等）。"""
     Base.metadata.create_all(bind=engine)
+    run_migrations()
     run_seed()
 
 

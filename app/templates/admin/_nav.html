@@ -1,6 +1,8 @@
 <nav class="admin-tabs">
   <a href="/admin/" class="{% if cur_page == 'dashboard' %}on{% endif %}">📊 工作台</a>
   <a href="/admin/reports" class="{% if cur_page == 'reports' %}on{% endif %}">🏆 榜单管理</a>
+  <a href="/admin/import" class="{% if cur_page == 'import' %}on{% endif %}">📥 批量导入</a>
   <a href="/admin/logs" class="{% if cur_page == 'logs' %}on{% endif %}">📜 操作日志</a>
+  <a href="/admin/settings" class="{% if cur_page == 'settings' %}on{% endif %}">⚙️ 设置</a>
   <span class="admin-user">👤 {{ admin.username }} · <a href="/admin/logout">退出</a></span>
 </nav>

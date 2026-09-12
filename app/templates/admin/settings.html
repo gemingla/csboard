@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}设置 · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="admin-wrap">
+  <div class="page-head">
+    <h1>设置</h1>
+    <div class="sub">账号安全与站点信息</div>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  <div class="section-title">🔑 修改登录密码</div>
+  <form class="form-card" method="post" action="/admin/settings/password" style="max-width:520px">
+    {% if error %}<div class="flash" style="position:static;margin-bottom:14px">{{ error }}</div>{% endif %}
+    {% if ok %}<div class="flash" style="position:static;margin-bottom:14px;border-color:var(--ok)">✅ {{ ok }}</div>{% endif %}
+
+    <div class="field">
+      <label>当前密码 <span class="req">*</span></label>
+      <input type="password" name="current" autocomplete="current-password" required>
+    </div>
+    <div class="field">
+      <label>新密码 <span class="req">*</span>（至少 6 位）</label>
+      <input type="password" name="new" autocomplete="new-password" required minlength="6">
+    </div>
+    <div class="field">
+      <label>确认新密码 <span class="req">*</span></label>
+      <input type="password" name="confirm" autocomplete="new-password" required minlength="6">
+    </div>
+    <button class="btn" type="submit">保存新密码</button>
+    <div class="hint" style="margin-top:8px">密码以加盐哈希（PBKDF2-SHA256）存储，修改后请用新密码重新登录。</div>
+  </form>
+
+  <div class="section-title">ℹ️ 站点信息</div>
+  <table class="table" style="max-width:520px">
+    <tbody>
+      <tr><td style="width:130px;color:var(--muted)">站点名称</td><td>{{ app_name }}</td></tr>
+      <tr><td style="color:var(--muted)">当前账号</td><td>{{ admin.username }}</td></tr>
+      <tr><td style="color:var(--muted)">版本</td><td>v{{ version }}</td></tr>
+      <tr><td style="color:var(--muted)">数据存储</td><td>SQLite（data/beastboard.db）</td></tr>
+    </tbody>
+  </table>
+</div>
+{% endblock %}

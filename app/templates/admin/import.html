@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}批量导入 · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="admin-wrap">
+  <div class="page-head">
+    <h1>批量导入</h1>
+    <div class="sub">一次录入一群人 —— 粘贴名单或上传 CSV 文件</div>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  {% if error %}
+  <div class="flash" style="position:static;margin-bottom:14px">{{ error }}</div>
+  {% endif %}
+
+  <form class="form-card" method="post" action="/admin/import" enctype="multipart/form-data">
+    <div class="field">
+      <label>① 粘贴名单（每行一位）</label>
+      <textarea name="text" style="min-height:180px"
+placeholder="姓名,事迹,围观指数
+张三,帮同学修好自行车,888
+李四,连续三年主动打扫教室,520
+王五,,0"></textarea>
+      <div class="hint">
+        格式：<b>姓名,事迹,指数</b> —— 事迹与指数可省略；分隔符支持 <b>英文逗号 / 中文逗号 / 制表符 / 竖线</b>
+        （可直接从 Excel 复制两列粘进来）；以 <b>#</b> 开头的行是注释会被忽略；首行「姓名」表头自动跳过。
+      </div>
+    </div>
+
+    <div class="field">
+      <label>② 或者上传 CSV / TXT 文件（优先于粘贴内容）</label>
+      <input type="file" name="csv_file" accept=".csv,.txt">
+      <div class="hint">文件编码支持 UTF-8 与 Excel 导出的 UTF-8-BOM。</div>
+    </div>
+
+    <button class="btn" type="submit">📥 开始导入（导入后自动上墙）</button>
+    <div class="hint" style="margin-top:8px">导入的条目会排在榜单末尾，可回到榜单管理用 ↑↓ 调整名次。</div>
+  </form>
+</div>
+{% endblock %}

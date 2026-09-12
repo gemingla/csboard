@@ -11,12 +11,12 @@
   <header class="topbar">
     <div class="topbar-inner">
       <a class="brand" href="/">
-        <span class="name">畜牲榜</span>
-        <span class="badge">BeastBoard</span>
+        <span class="name">cs榜</span>
+        <span class="badge">CSBOARD</span>
       </a>
       <nav class="topnav">
         <a href="/" class="{% if active_slug is none and not admin %}active{% endif %}">首页</a>
-        <a href="/board/honor" class="{% if active_slug == 'honor' %}active{% endif %}">好人榜</a>
+        <a href="/board/honor" class="{% if active_slug == 'honor' %}active{% endif %}">榜单</a>
         {% if admin %}<a href="/admin/">管理台</a>{% endif %}
       </nav>
     </div>

@@ -11,8 +11,16 @@
 
   {% include "admin/_nav.html" %}
 
+  {% if request.query_params.get('imported') %}
+  <div class="flash" style="position:static;margin-bottom:14px;border-color:var(--ok)">
+    ✅ 已批量导入 {{ request.query_params.get('imported') }} 位成员，全部已上墙
+  </div>
+  {% endif %}
+
   <!-- ⚡ 快速添加：一行即上榜 -->
-  <div class="section-title">⚡ 快速添加（填一行，回车即上榜）</div>
+  <div class="section-title">⚡ 快速添加（填一行，回车即上榜）
+    <span style="font-size:12px;color:var(--muted)">· 一次录很多人请用 <a href="/admin/import">📥 批量导入</a></span>
+  </div>
   <form class="form-card" method="post" action="/admin/reports/add-fast" id="add-fast">
     <div class="fast-row">
       <input type="text" name="who" placeholder="姓名 / 称号（必填）" required autofocus>
@@ -20,7 +28,7 @@
       <input type="text" name="heat" placeholder="指数（可选）" style="width:120px">
       <button class="btn" type="submit">＋ 添加</button>
     </div>
-    <div class="hint" style="margin-top:8px">标题自动生成「年度好人 · 姓名」；添加后停留本页，可继续连按回车连加。</div>
+    <div class="hint" style="margin-top:8px">标题自动生成「cs榜 · 姓名」；添加后停留本页，可连续回车连加。</div>
   </form>
 
   <!-- 📋 完整表单（默认收起） -->
@@ -30,7 +38,7 @@
       <div class="add-row2" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
         <div class="field">
           <label>标题 <span class="req">*</span></label>
-          <input type="text" name="title" maxlength="120" required placeholder="例如：年度好人 · 张三">
+          <input type="text" name="title" maxlength="120" required placeholder="例如：cs榜 · 张三">
         </div>
         <div class="field">
           <label>姓名 / 称号</label>
@@ -77,6 +85,12 @@
         <td>{{ r.board.name }}</td>
         <td>{{ r.heat }}</td>
         <td class="ops">
+          <a class="btn small secondary" href="/admin/report/{{ r.id }}/edit">编辑</a>
+          <form class="inline-form" method="post" action="/admin/report/{{ r.id }}/move">
+            <button class="btn small secondary" type="submit" name="action" value="top" title="置顶">⤒</button>
+            <button class="btn small secondary" type="submit" name="action" value="up" title="上移">↑</button>
+            <button class="btn small secondary" type="submit" name="action" value="down" title="下移">↓</button>
+          </form>
           <form class="inline-form" method="post" action="/admin/report/{{ r.id }}/delete" data-confirm="确定删除「{{ r.title }}」？删除后不可恢复。">
             <button class="btn small danger" type="submit">删除</button>
           </form>

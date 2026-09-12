@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}编辑条目 · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="admin-wrap">
+  <div class="page-head">
+    <h1>编辑条目</h1>
+    <div class="sub">编号 #{{ report.id }} · 修改后前台立即生效</div>
+  </div>
+
+  {% include "admin/_nav.html" %}
+
+  <form class="form-card" method="post" action="/admin/report/{{ report.id }}/edit">
+    <div class="add-row2" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="field">
+        <label>标题 <span class="req">*</span></label>
+        <input type="text" name="title" maxlength="120" required value="{{ report.title }}">
+      </div>
+      <div class="field">
+        <label>姓名 / 称号</label>
+        <input type="text" name="who" maxlength="80" value="{{ report.who }}">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>上榜原因 / 事迹 <span class="req">*</span></label>
+      <textarea name="reason" required>{{ report.reason }}</textarea>
+    </div>
+
+    <div class="add-row2" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="field">
+        <label>围观指数</label>
+        <input type="text" name="heat" value="{{ report.heat }}">
+      </div>
+      <div class="field">
+        <label>所属榜单</label>
+        <select name="board">
+          {% for b in boards %}
+          <option value="{{ b.slug }}" {% if b.id == report.board_id %}selected{% endif %}>{{ b.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label>时间（可选）</label>
+        <input type="text" name="happened_at" maxlength="40" value="{{ report.happened_at }}">
+      </div>
+      <div class="field">
+        <label>地点（可选）</label>
+        <input type="text" name="location" maxlength="120" value="{{ report.location }}">
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;align-items:center">
+      <button class="btn" type="submit">💾 保存修改</button>
+      <a class="btn secondary" href="/admin/reports">取消</a>
+      <a class="btn secondary" href="/report/{{ report.id }}" target="_blank" style="margin-left:auto">查看前台效果 →</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

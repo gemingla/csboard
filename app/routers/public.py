@@ -1,4 +1,4 @@
-"""公共（前台）路由：首页（好人榜）、详情页（看原因）、围观、条款。"""
+"""公共（前台）路由：首页（cs榜）、详情页（看原因）、围观、条款。"""
 from __future__ import annotations
 
 from typing import Annotated
@@ -8,16 +8,16 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..config import MEDIA_DIR
+from ..config import MEDIA_DIR, VERSION
 from ..database import get_db
 from ..models import Board, Report
 
 router = APIRouter()
 
-TERMS_TEXT = """使用条款（继承自原版程序）：
+TERMS_TEXT = """使用条款：
 1. 您同意遵循不告老师法则。
-2. 匿名反映只描述行为，不公开个人实名信息。
-3. 提供虚假信息、恶意抹黑者将被请出本榜。
+2. 上榜内容由管理员维护，接受所有人监督。
+3. 恶意抹黑、造谣生事者将被请出本榜。
 4. 使用本应用即表示您同意以上条款。"""
 
 
@@ -25,7 +25,7 @@ def _tpl(request: Request, name: str, **ctx):
     return request.app.state.templates.TemplateResponse(
         request=request, name=name,
         context={"app_name": request.app.state.app_name,
-                 "motto": request.app.state.motto, "version": "0.1.0", **ctx},
+                 "motto": request.app.state.motto, "version": VERSION, **ctx},
     )
 
 
@@ -50,7 +50,7 @@ def index(request: Request, db: Annotated[Session, Depends(get_db)]):
         reports = db.scalars(
             select(Report).where(Report.board_id == board.id,
                                  Report.status.in_(["approved", "processed", "transferred"]))
-            .order_by(Report.heat.desc())
+            .order_by(Report.sort_order.asc(), Report.heat.desc())
         ).all()
         sections.append({"board": board, "reports": reports})
     return _tpl(request, "index.html",
@@ -91,7 +91,7 @@ def board_page(slug: str, request: Request, db: Annotated[Session, Depends(get_d
     reports = db.scalars(
         select(Report).where(Report.board_id == board.id,
                              Report.status.in_(["approved", "processed", "transferred"]))
-        .order_by(Report.heat.desc())
+        .order_by(Report.sort_order.asc(), Report.heat.desc())
     ).all()
     return _tpl(request, "board.html", board=board, reports=reports, active_slug=slug)
 

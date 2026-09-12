@@ -1,7 +1,7 @@
 """种子数据（幂等：已存在则跳过）。
 
-v0.1.2 内容：
-1. 榜单：仅「好人榜」空榜（不预置人物 —— 榜单成员由管理员在管理台自行添加）
+v0.2 内容：
+1. 榜单：「cs榜」空榜（不预置人物 —— 榜单成员由管理员在管理台自行添加/批量导入）
 2. 管理员账号：admin / admin123456（可用环境变量覆盖，见 config.DEFAULT_ADMIN）
 3. 视频素材：迁移 yt.mp4 / 闫涛10.mp4 到 data/media（左右轮流播放用）
 """
@@ -12,7 +12,7 @@ from pathlib import Path
 
 from sqlalchemy import select
 
-from .config import DEFAULT_ADMIN, MEDIA_DIR
+from .config import BOARD_NAME, DEFAULT_ADMIN, MEDIA_DIR
 from .database import SessionLocal
 from .models import Admin, Board
 from .security import hash_password
@@ -48,9 +48,9 @@ def _seed_boards(db) -> None:
         return
 
     honor = Board(
-        name="好人榜",
+        name=BOARD_NAME,
         slug="honor",
-        tagline="感动中国 2023-2024 年度人物排行榜 · 继承版",
+        tagline="年度人物排行榜 · 继承版",
         description="继承原版程序灵感的年度感谢榜：把最值得感谢的人，挂上最高的榜。"
                     "左右两边是献唱歌声，榜单横贯中央。",
         sort_order=0,

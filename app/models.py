@@ -52,6 +52,7 @@ class Report(Base):
     location: Mapped[str] = mapped_column(String(120), default="")  # 地点
     happened_at: Mapped[str] = mapped_column(String(40), default="")  # 时间描述（自由文本）
     heat: Mapped[int] = mapped_column(BigInteger, default=0)  # 围观指数（继承“大数级”梗）
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, index=True)  # 手动排序（越小越靠前）
     status: Mapped[str] = mapped_column(String(20), default=STATUS_PENDING, index=True)
     reject_reason: Mapped[str] = mapped_column(Text, default="")
     process_result: Mapped[str] = mapped_column(Text, default="")   # 处理结果（曝光榜）
