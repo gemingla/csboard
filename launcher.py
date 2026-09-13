@@ -207,19 +207,28 @@ def _apply_update(new_file: Path) -> bool:
     为什么要绕这一圈：Windows 不允许覆盖/删除正在运行的 exe；
     而 PyInstaller onefile 的 exe 一旦被改名/移动，bootloader 会立刻报错退出。
     所以唯一稳妥的做法是「退出后由外部脚本替换文件」。
-    脚本用 ping 做延时（timeout 在无交互 stdin 时会直接失败）。
+
+    脚本要点（都是踩过的坑）：
+      * 用 ping -n 做延时（timeout 在无交互 stdin 时直接失败）
+      * 不用 tasklist 判断进程存活（在无窗口环境下可能挂起），改为重试 move
+      * 独立进程组启动，不受父进程退出影响；启动新版本前清掉更新开关防循环
     """
     exe = EXE_PATH
     script_path = exe.parent / "_csboard_update.bat"
     name = exe.name
+    new_name = new_file.name
     body = (
         "@echo off\r\n"
         "ping -n 3 127.0.0.1 >nul\r\n"
-        ":wait\r\n"
-        f'tasklist /FI "IMAGENAME eq {name}" 2>NUL | find /I "{name}" >NUL\r\n'
-        "if not errorlevel 1 (ping -n 2 127.0.0.1 >nul & goto wait)\r\n"
-        f'move /Y "{new_file.name}" "{name}" >nul 2>NUL\r\n'
-        # 新版本启动时清掉更新开关，避免反复触发更新循环
+        "set tries=0\r\n"
+        ":try\r\n"
+        f'move /Y "{new_name}" "{name}" >nul 2>NUL\r\n'
+        f'if not exist "{new_name}" goto done\r\n'
+        "set /a tries+=1\r\n"
+        "if %tries% GEQ 15 goto done\r\n"
+        "ping -n 3 127.0.0.1 >nul\r\n"
+        "goto try\r\n"
+        ":done\r\n"
         "set CSBOARD_FORCE_UPDATE=\r\n"
         "set CSBOARD_AUTO_UPDATE=\r\n"
         f'start "" "{name}"\r\n'
