@@ -18,25 +18,43 @@
 
 ## 🚀 一键部署（Windows，推荐）
 
-从 **[Releases](https://github.com/gemingla/csboard/releases/latest)** 下载 `csboard.exe`（约 39 MB，免安装）：
+从 **[Releases](https://github.com/gemingla/csboard/releases/latest)** 下载 `csboard.exe`（约 45 MB，免安装）：
 
 | 步骤 | 说明 |
 |---|---|
 | 1️⃣ 双击运行 | 自动选择空闲端口 → 启动服务 → 自动打开浏览器 |
-| 2️⃣ 开始录榜 | 登录 `/admin/login`（`admin / admin123456`）→ 快速添加或批量导入 |
-| 3️⃣ 数据在哪 | 全部在 exe 同级的 `data/` 目录（绿色版，拷走该目录即完成迁移/备份） |
-| 4️⃣ 带上歌声 | 在 exe 旁建 `video/` 放 mp4，或把 mp4 丢进 `data/media/`（取前两个轮流播放） |
+| 2️⃣ 首次设置 | 控制台引导设置**管理员用户名与密码**（回车可用默认 `admin / admin123456`） |
+| 3️⃣ 开始录榜 | 登录 `/admin/login` → 快速添加 / 批量导入（Excel 直接粘贴） |
+| 4️⃣ 数据在哪 | 全部在 exe 同级的 `data/` 目录（绿色版，拷走该目录即完成迁移/备份） |
+| 5️⃣ 自带歌声 | **唱歌视频已内置**：首次启动自动释放到 `data/media/`，开箱即有左右献唱 |
+| 6️⃣ 自动更新 | 启动时静默检查新版：抓到就下载，`CSBOARD_AUTO_UPDATE=1` 时自动切换过去 |
 
 **环境变量**（可选）：
 
 ```bat
-set CSBOARD_HOST=0.0.0.0     :: 允许局域网访问（同网段设备访问 http://你的IP:端口）
-set CSBOARD_PORT=8080        :: 指定端口（默认从 8000 起自动找空闲）
-set CSBOARD_NO_BROWSER=1     :: 启动时不自动打开浏览器
-set BB_ADMIN_PASSWORD=xxx    :: 首次生成管理员账号时使用该密码
+set CSBOARD_HOST=0.0.0.0      :: 允许局域网访问（同网段设备访问 http://你的IP:端口）
+set CSBOARD_PORT=8080         :: 指定端口（默认从 8000 起自动找空闲）
+set CSBOARD_AUTO_UPDATE=1     :: 发现新版本时自动切换并重启（推荐）
+set CSBOARD_FORCE_UPDATE=1    :: 强制拉取并更新到最新版
+set CSBOARD_NO_UPDATE=1       :: 关闭更新检查
+set CSBOARD_NO_BROWSER=1      :: 启动时不自动打开浏览器
+set CSBOARD_DIAGNOSE=1        :: 诊断模式：打印网络/证书/抓取详情
+set BB_ADMIN_USER=teacher     :: 跳过首次引导，直接指定管理员账号
+set BB_ADMIN_PASSWORD=xxx
 ```
 
 > 首次启动会创建 `data/beastboard.db` 与管理员账号 —— 请登录后到 **设置** 页改成自己的密码。
+
+### 🔄 自动更新是怎么工作的
+
+1. 启动后台静默检查最新 Release（抓不到 / 无网络 → **静默跳过**，不影响使用）
+2. 发现新版本 → 下载为独立文件 `csboard_vX.Y.Z.exe`
+3. 开了 `CSBOARD_AUTO_UPDATE=1` → 立即启动新文件并退出旧进程（几乎无感）
+4. 没开自动 → **下次打开程序时会自动跳到新版本**
+5. `csboard.exe` 保留为“跳板”，桌面快捷方式永远有效；启动时会清理更旧的版本文件
+
+> 为什么不做「覆盖同名 exe」？Windows 不允许覆盖正在运行的程序，而 PyInstaller onefile 的
+> exe 一旦被改名就会自我报错退出。下载为独立版本文件是唯一稳妥且不依赖批处理脚本的做法。
 
 ---
 
@@ -152,6 +170,11 @@ python -c "import sys; sys.path.insert(0,'.'); from app.security import hash_pas
 
 **Q：Excel 导出的名单导入后是乱码？**
 已内置 GBK/ANSI 自动识别；若仍异常，请在 Excel 里另存为「CSV UTF-8」后重新导入。
+
+**Q：更新后目录里多出 `csboard_v0.2.9.exe` 这样的文件？**
+那是自动更新下载的新版本（`csboard.exe` 是老版本留下的“跳板”，双击它也会自动跳到新版）。
+想清爽一点：把新版改名成 `csboard.exe`（老文件先删/移走），之后旧文件不会再出现；
+启动时程序会自动删除比当前更旧的版本文件。
 
 **Q：想换主色调 / 去掉动画？**
 主色在 `app/static/css/app.css` 顶部 `:root` 变量；动画集中在同文件「丝滑动画层」区块，
