@@ -17,7 +17,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from . import config
 from .database import Base, engine
-from .migrate import run_migrations
+from .migrate import apply_admin_reset, run_migrations
 from .routers import admin, public
 from .seed import run_seed
 
@@ -59,10 +59,11 @@ app.include_router(admin.router)
 
 @app.on_event("startup")
 def _startup() -> None:
-    """建表 + 迁移（加列/品牌同步）+ 种子数据（全部幂等）。"""
+    """建表 + 迁移（加列/品牌同步）+ 种子数据 + 可选管理员重置（全部幂等）。"""
     Base.metadata.create_all(bind=engine)
     run_migrations()
     run_seed()
+    apply_admin_reset()
 
 
 @app.exception_handler(404)
