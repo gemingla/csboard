@@ -31,7 +31,7 @@ SECRET_KEY_FILE = DATA_DIR / "secret.key"
 APP_NAME = "cs榜"
 APP_SLUG = "csboard"
 BOARD_NAME = "cs榜"          # 榜单显示名（迁移时同步到已存在的榜单记录）
-VERSION = "0.2.7"
+VERSION = "0.2.8"
 MOTTO = "把最该感谢的人，挂上最高的榜。"
 
 DEFAULT_ADMIN = {"username": os.environ.get("BB_ADMIN_USER", "admin"),

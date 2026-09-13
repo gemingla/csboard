@@ -31,7 +31,7 @@ from pathlib import Path
 REPO = "gemingla/csboard"          # 自动更新来源
 IS_FROZEN = getattr(sys, "frozen", False)
 EXE_PATH = Path(sys.executable) if IS_FROZEN else Path("csboard.exe")
-STAGED_PREFIX = ".csboard_"        # 更新暂存文件前缀（新版本先以此名启动，再自改名）
+DOWNLOAD_PREFIX = "csboard_v"      # 下载的新版本文件名前缀：csboard_v0.2.8.exe
 
 
 def _setup_console() -> None:
@@ -49,23 +49,72 @@ def _setup_console() -> None:
 
 
 def _promote_staged() -> None:
-    """不再使用（保留占位：PyInstaller onefile 不允许运行中的 exe 被改名）。
+    """不再使用（保留说明：PyInstaller onefile 的 exe 不允许被改名/移动）。
 
-    实测：onefile 打包的 exe 被改名后，bootloader 会在延迟加载模块时报
-    "appears to have been moved or deleted" 并退出。因此更新改为
-    「旧进程退出后由批处理替换文件」的方案，见 _apply_update。
+    实测：onefile 打包的 exe 一旦改名，bootloader 会在延迟加载模块时报
+    "appears to have been moved or deleted" 并退出。
+    最终采用的更新方案见 _launch_newer：下载为独立版本文件并直接切换运行。
     """
 
 
-def _cleanup_update_residue() -> None:
-    """清理更新过程残留（.exe.new / 更新脚本 / 历史暂存文件）。"""
+def _parse_version(text: str) -> tuple:
+    parts = []
+    for chunk in str(text).lstrip("vV").split("."):
+        digits = "".join(ch for ch in chunk if ch.isdigit())
+        parts.append(int(digits) if digits else 0)
+    return tuple(parts)
+
+
+def _downloaded_versions() -> list[tuple[tuple, Path]]:
+    """同目录下已下载的版本文件：[(版本元组, 路径), ...]"""
+    if not IS_FROZEN:
+        return []
+    items: list[tuple[tuple, Path]] = []
+    for candidate in EXE_PATH.parent.glob(f"{DOWNLOAD_PREFIX}*.exe"):
+        version = _parse_version(candidate.stem[len(DOWNLOAD_PREFIX):])
+        if version:
+            items.append((version, candidate))
+    return items
+
+
+def _launch_newer(current_version: str) -> bool:
+    """同目录若存在更高版本的 csboard_vX.Y.Z.exe，就切换过去并退出当前进程。
+
+    这是最可靠的自动更新落地方式：**完全不碰正在运行的 exe**
+    （Windows 不允许覆盖/删除运行中的 exe，PyInstaller onefile 也不允许改名）。
+    旧程序保留为“跳板”：下次双击它时同样会自动跳到最新版本。
+    """
+    cur = _parse_version(current_version)
+    newer = [(v, p) for v, p in _downloaded_versions() if v > cur]
+    if not newer:
+        return False
+    version, path = max(newer, key=lambda item: item[0])
+    print(f"[更新] 检测到本地新版本 {path.name}，正在切换…")
+    try:
+        env = dict(os.environ)
+        env.pop("CSBOARD_FORCE_UPDATE", None)     # 避免新版再次强制更新形成循环
+        subprocess.Popen([str(path)], cwd=str(EXE_PATH.parent), env=env, close_fds=True)
+    except OSError as exc:
+        print(f"[更新] 切换失败，继续使用当前版本（{exc}）")
+        return False
+    time.sleep(0.6)
+    return True
+
+
+def _cleanup_old_downloads(current_version: str) -> None:
+    """删除比当前版本更旧的下载文件与历史残留。"""
     if not IS_FROZEN:
         return
-    folder = EXE_PATH.parent
-    patterns = ["*.exe.new", "_csboard_update.bat", "_csboard_selfupdate.bat",
-                f"{STAGED_PREFIX}*.exe"]
-    for pattern in patterns:
-        for leftover in folder.glob(pattern):
+    cur = _parse_version(current_version)
+    for version, path in _downloaded_versions():
+        if version < cur:
+            try:
+                path.unlink()
+            except OSError:
+                pass
+    for pattern in ("*.exe.new", "_csboard_update.bat", "_csboard_selfupdate.bat",
+                    ".csboard_*.exe"):
+        for leftover in EXE_PATH.parent.glob(pattern):
             if leftover.resolve() == EXE_PATH.resolve():
                 continue
             try:
@@ -202,55 +251,17 @@ def _fetch_latest(timeout: int = 7) -> tuple[str, str] | None:
 
 
 def _apply_update(new_file: Path) -> bool:
-    """写一个批处理：等旧进程退出后替换 exe 并启动新版本。
+    """（已废弃）批处理替换方案，保留说明以备参考。
 
-    为什么要绕这一圈：Windows 不允许覆盖/删除正在运行的 exe；
-    而 PyInstaller onefile 的 exe 一旦被改名/移动，bootloader 会立刻报错退出。
-    所以唯一稳妥的做法是「退出后由外部脚本替换文件」。
-
-    脚本要点（都是踩过的坑）：
-      * 用 ping -n 做延时（timeout 在无交互 stdin 时直接失败）
-      * 不用 tasklist 判断进程存活（在无窗口环境下可能挂起），改为重试 move
-      * 独立进程组启动，不受父进程退出影响；启动新版本前清掉更新开关防循环
+    曾用「退出后由批处理 move 覆盖 exe」实现，但实测在无窗口/管道环境下
+    批处理启动的新进程拿不到可用控制台句柄，容易启动即退出。
+    现行方案见 _launch_newer：下载为独立版本文件，直接启动它。
     """
-    exe = EXE_PATH
-    script_path = exe.parent / "_csboard_update.bat"
-    name = exe.name
-    new_name = new_file.name
-    body = (
-        "@echo off\r\n"
-        "ping -n 3 127.0.0.1 >nul\r\n"
-        "set tries=0\r\n"
-        ":try\r\n"
-        f'move /Y "{new_name}" "{name}" >nul 2>NUL\r\n'
-        f'if not exist "{new_name}" goto done\r\n'
-        "set /a tries+=1\r\n"
-        "if %tries% GEQ 15 goto done\r\n"
-        "ping -n 3 127.0.0.1 >nul\r\n"
-        "goto try\r\n"
-        ":done\r\n"
-        "set CSBOARD_FORCE_UPDATE=\r\n"
-        "set CSBOARD_AUTO_UPDATE=\r\n"
-        f'start "" "{name}"\r\n'
-        'del "%~f0" >nul 2>NUL\r\n'
-    )
-    try:
-        script_path.write_text(body, encoding="gbk", errors="replace")
-        subprocess.Popen(
-            ["cmd", "/c", str(script_path)],
-            cwd=str(exe.parent),
-            stdin=subprocess.DEVNULL,
-            creationflags=(getattr(subprocess, "DETACHED_PROCESS", 0)
-                           | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)),
-            close_fds=True,
-        )
-        return True
-    except OSError:
-        return False
+    return False
 
 
 def check_update(current_version: str, quiet: bool = True) -> None:
-    """后台检查更新：抓到新版本就下载（可选自动替换重启）；任何失败都静默跳过。"""
+    """后台检查更新：抓到新版本就下载（可选自动切换）；任何失败都静默跳过。"""
     if os.environ.get("CSBOARD_NO_UPDATE") == "1":
         return
     force = os.environ.get("CSBOARD_FORCE_UPDATE") == "1"
@@ -265,19 +276,27 @@ def check_update(current_version: str, quiet: bool = True) -> None:
         if not force and _parse_version(tag) <= _parse_version(current_version):
             return
         print(f"\n[更新] {'强制更新' if force else '发现新版本'} {tag}（当前 v{current_version}），正在下载…")
-        target = EXE_PATH.with_suffix(".exe.new") if IS_FROZEN else Path("csboard.exe.new")
+        tag_clean = tag.lstrip("vV") or "new"
+        target = (EXE_PATH.with_name(f"{DOWNLOAD_PREFIX}{tag_clean}.exe")
+                  if IS_FROZEN else Path(f"{DOWNLOAD_PREFIX}{tag_clean}.exe"))
         urllib.request.urlretrieve(url, target)
         print(f"[更新] 下载完成：{target.name}")
+
         if os.environ.get("CSBOARD_AUTO_UPDATE") == "1" and IS_FROZEN:
-            if _apply_update(target):
-                print("[更新] 正在重启以应用新版本…（窗口会自行关闭）\n")
+            print("[更新] 正在切换到新版本…\n")
+            try:
+                env = dict(os.environ)
+                env.pop("CSBOARD_FORCE_UPDATE", None)
+                subprocess.Popen([str(target)], cwd=str(EXE_PATH.parent), env=env,
+                                 close_fds=True)
                 time.sleep(1)
                 os._exit(0)
-            print("[更新] 自动替换未启动，请手动把 csboard.exe.new 改名覆盖 csboard.exe\n")
+            except OSError as exc:
+                print(f"[更新] 自动切换失败：{exc}（可手动运行 {target.name}）\n")
         else:
-            print("[更新] 新版本已下载（csboard.exe.new）：")
-            print("[更新]   · 设 CSBOARD_AUTO_UPDATE=1 可让程序自动替换并重启")
-            print("[更新]   · 或手动关闭本窗口后，把 .new 文件改名覆盖 csboard.exe\n")
+            print(f"[更新] 新版本已就绪：{target.name}")
+            print("[更新]   · 重新打开程序即会自动切换到新版本")
+            print("[更新]   · 或设 CSBOARD_AUTO_UPDATE=1 让它立即切换\n")
     except Exception as exc:  # noqa: BLE001 —— 网络/权限/环境任何问题都只跳过
         if not quiet:
             print(f"[更新] 已跳过（{type(exc).__name__}: {exc}）")
@@ -298,6 +317,11 @@ def main() -> None:
 
     from app import config          # 轻量导入：不触发建表
     first_run_setup(Path(config.DB_PATH))
+
+    # 更新相关：清理旧下载残留 → 若已有更高版本就直接切换过去
+    _cleanup_old_downloads(config.VERSION)
+    if _launch_newer(config.VERSION):
+        return
 
     from app.main import app        # 导入即注册路由；建表/种子在 startup 事件
 
