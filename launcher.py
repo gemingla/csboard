@@ -48,27 +48,28 @@ def _setup_console() -> None:
             pass
 
 
-def _promote_staged() -> None:
+def _promote_staged(attempts: int = 15, delay: float = 1.0) -> None:
     """本进程若由更新暂存文件启动：顶掉旧 exe 并把自身改回原名。
 
     Windows 不允许覆盖/删除正在运行的 exe，但**允许重命名**它，
     因此「启动新文件 → 删掉旧文件 → 把自己改回原名」是最稳的自动更新落地方式。
+    旧进程可能还没完全退出（文件仍被占用），所以这里带重试；全部失败也不影响使用。
     """
     global EXE_PATH
     if not IS_FROZEN or not EXE_PATH.name.startswith(STAGED_PREFIX):
         return
     original = EXE_PATH.with_name("csboard.exe")
-    try:
-        if original.exists():
-            original.unlink()
-    except OSError:
-        return                       # 旧版本仍在运行 → 保持暂存名继续服务
-    try:
-        os.replace(EXE_PATH, original)
-        EXE_PATH = original
-        print(f"[更新] 已升级并接管原程序名：{original.name}")
-    except OSError:
-        pass
+    for _ in range(attempts):
+        try:
+            if original.exists():
+                original.unlink()
+            os.replace(EXE_PATH, original)
+            EXE_PATH = original
+            print(f"[更新] 已升级到新版本，并接管程序名：{original.name}")
+            return
+        except OSError:
+            time.sleep(delay)
+    print(f"[更新] 旧程序文件暂被占用，本次以 {EXE_PATH.name} 运行（下次启动会自动接管）")
 
 
 def _cleanup_update_residue() -> None:
@@ -231,7 +232,10 @@ def _apply_update(new_file: Path, tag: str) -> bool:
     try:
         env = dict(os.environ)
         env.pop("CSBOARD_FORCE_UPDATE", None)   # 避免新版本再次强制更新形成循环
+        log_path = EXE_PATH.parent / "csboard.log"
+        log_file = open(log_path, "ab")         # 新版本输出写入日志，便于排查
         subprocess.Popen([str(staged)], cwd=str(EXE_PATH.parent), env=env,
+                         stdout=log_file, stderr=log_file,
                          creationflags=getattr(subprocess, "DETACHED_PROCESS", 0),
                          close_fds=True)
         return True
@@ -279,8 +283,9 @@ def main() -> None:
     if os.environ.get("CSBOARD_DIAGNOSE") == "1":
         diagnose()
         return
-    _promote_staged()               # 若本进程是更新下来的新版本：接管原文件名
     _cleanup_update_residue()
+    # 接管原程序名可能因文件占用需要重试：放到后台线程，不拖慢服务启动
+    threading.Thread(target=_promote_staged, daemon=True).start()
     _setup_ssl()
     host = os.environ.get("CSBOARD_HOST", "127.0.0.1")
     env_port = os.environ.get("CSBOARD_PORT", "").strip()
