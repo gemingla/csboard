@@ -19,7 +19,13 @@
         <div class="duet-cta" id="duet-cta">🎵 点击开始<br>轮流献唱</div>
       </div>
       {% else %}
-      <div class="side-empty">（未找到视频素材）</div>
+      <div class="side-empty">
+        暂无视频素材<br>
+        <span style="font-size:11.5px;line-height:1.7">
+          把 mp4 放进 <b>data/media/</b><br>
+          （或程序旁的 <b>video/</b> 目录后重启）
+        </span>
+      </div>
       {% endif %}
       <div class="side-note">歌声轮流，一边唱罢另一边登场。</div>
     </aside>
@@ -65,7 +71,13 @@
         <div class="v-title"><span>{{ videos[1].name }}</span><span class="video-pill">点击播放</span></div>
       </div>
       {% else %}
-      <div class="side-empty">（未找到视频素材）</div>
+      <div class="side-empty">
+        暂无视频素材<br>
+        <span style="font-size:11.5px;line-height:1.7">
+          把 mp4 放进 <b>data/media/</b><br>
+          （或程序旁的 <b>video/</b> 目录后重启）
+        </span>
+      </div>
       {% endif %}
       <div class="side-note">一左一右，轮流献唱，榜上皆英雄。</div>
     </aside>

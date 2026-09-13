@@ -8,6 +8,7 @@ v0.2 内容：
 from __future__ import annotations
 
 import shutil
+import sys
 from pathlib import Path
 
 from sqlalchemy import select
@@ -64,23 +65,51 @@ def _seed_boards(db) -> None:
     db.commit()
 
 
-def _seed_videos() -> None:
-    """视频素材迁移：优先取发布目录，找不到则跳过（不影响运行）。"""
-    source = None
-    for cand in _SOURCE_DIR_CANDIDATES:
+def _run_migration(source: Path) -> int:
+    """把 source 目录下的视频复制到 data/media/（已存在则跳过），返回复制数量。"""
+    copied = 0
+    try:
+        MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        return 0
+    # 目录内所有 mp4 都收（不限于预置文件名，用户自己丢进去的也认）
+    candidates = list(_VIDEOS)
+    try:
+        for extra in source.glob("*.mp4"):
+            if extra.name not in candidates:
+                candidates.append(extra.name)
+    except OSError:
+        pass
+    for name in candidates:
+        src = source / name
+        dst = MEDIA_DIR / name
         try:
-            if cand.exists():
-                source = cand
-                break
+            if src.exists() and not dst.exists():
+                shutil.copy2(src, dst)
+                copied += 1
         except OSError:
             continue
-    if source is None:
-        return
-    MEDIA_DIR.mkdir(parents=True, exist_ok=True)
-    for name in _VIDEOS:
-        src = source / name
-        if src.exists() and not (MEDIA_DIR / name).exists():
-            try:
-                shutil.copy2(src, MEDIA_DIR / name)
-            except OSError:
+    return copied
+
+
+def _seed_videos() -> None:
+    """视频素材迁移（按优先级）：内置素材 → exe/项目同级 video/ → 原版发布目录。
+
+    内置素材（打包时随 exe 携带，位于 sys._MEIPASS/bundled_video）保证
+    「一键部署」开箱即有歌声；外部目录可覆盖/补充。全部失败也不影响运行。
+    """
+    meipass = getattr(sys, "_MEIPASS", None)
+    candidates: list[Path] = []
+    if meipass:
+        candidates.append(Path(meipass) / "bundled_video")
+    candidates.extend(_SOURCE_DIR_CANDIDATES)
+
+    for source in candidates:
+        try:
+            if not source.exists():
                 continue
+        except OSError:
+            continue
+        if _run_migration(source) > 0:
+            return
+        # 该来源没有可复制的内容（或已全部存在）→ 继续尝试下一个来源
