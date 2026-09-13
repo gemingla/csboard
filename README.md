@@ -29,6 +29,28 @@
 | 5️⃣ 自带歌声 | **唱歌视频已内置**：首次启动自动释放到 `data/media/`，开箱即有左右献唱 |
 | 6️⃣ 自动更新 | 启动时静默检查新版：抓到就下载，`CSBOARD_AUTO_UPDATE=1` 时自动切换过去 |
 
+### 🔑 初始管理员账号
+
+```
+用户名：admin
+密  码：admin123456
+登录地址：http://127.0.0.1:端口/admin/login
+```
+
+- **请登录后立刻到「设置」页改成自己的密码**（后台 → ⚙️ 设置 → 修改登录密码）
+- 上面这组账号只在**首次创建数据库**时使用：如果 `data/` 目录已经存在（以前跑过），
+  首次引导不会再出现，直接用它登录即可
+- **忘记密码**：用 [setup-admin.bat](https://github.com/gemingla/csboard/releases/latest) 或自建 bat 启动一次即可重置（榜单数据保留）：
+
+```bat
+set BB_ADMIN_USER=你的用户名
+set BB_ADMIN_PASSWORD=你的新密码
+set BB_ADMIN_RESET=1
+csboard.exe
+```
+
+> 想自定义初始账号：删掉 `data/` 目录后重新启动（会丢榜单数据），或在启动前设 `BB_ADMIN_USER` / `BB_ADMIN_PASSWORD`。
+
 **环境变量**（可选）：
 
 ```bat
@@ -40,7 +62,8 @@ set CSBOARD_NO_UPDATE=1       :: 关闭更新检查
 set CSBOARD_NO_BROWSER=1      :: 启动时不自动打开浏览器
 set CSBOARD_DIAGNOSE=1        :: 诊断模式：打印网络/证书/抓取详情
 set BB_ADMIN_USER=teacher     :: 跳过首次引导，直接指定管理员账号
-set BB_ADMIN_PASSWORD=xxx
+set BB_ADMIN_PASSWORD=xxx     :: （配合上行使用，需 ≥6 位）
+set BB_ADMIN_RESET=1          :: 强制重置管理员为上面的账号密码（忘记密码时用，数据保留）
 ```
 
 > 首次启动会创建 `data/beastboard.db` 与管理员账号 —— 请登录后到 **设置** 页改成自己的密码。
@@ -149,6 +172,10 @@ csboard/
 ---
 
 ## ❓ 常见问题
+
+**Q：初始管理员密码是多少？**
+默认是 **`admin` / `admin123456`**（见上文「🔑 初始管理员账号」）。
+登录后请到「设置」页改密；忘了密码就用 `BB_ADMIN_RESET=1` 重置，不用删数据。
 
 **Q：双击 exe 没反应 / 一闪而过？**
 端口被占用时会自动换端口，若仍失败请检查杀毒软件拦截；可在命令行运行 `csboard.exe` 查看报错信息。
