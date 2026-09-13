@@ -6,12 +6,14 @@
 搞笑榜单、唱歌视频、"不告老师法则"条款、土味大数分数 —— 加上
 **点进去看原因的详情页** 与 **管理员后台**，做成可部署、可二次开发的开源项目。
 
-## 功能（v0.2）
+## 功能（v0.2.1）
 
 **前台**
 - 首页三栏布局：**左右两边献唱视频轮流播放**（20 秒一换、互斥播放，点击才开播），中央排行榜**竖向排列**
 - 前三名奖牌高亮、围观指数数字滚动（继承 exe 大数梗），点击条目进入**详情页看原因**
 - 详情页：上榜原因（时间 / 地点 / 事迹）+ 「顶一下」围观 +1
+- **丝滑动画层**：入场交错浮现、背景光斑跟随鼠标、榜单行光带跟随、按钮涟漪、滚动进度条、
+  奖牌弹入、献唱呼吸光晕（并遵循系统「减少动态效果」偏好）
 - 进场条款弹窗（"不告老师法则"）、键盘彩蛋（B-E-A-S-T）、关于页
 - 樱花莓果液态玻璃主题，全站手写 CSS，**零外部 CDN**，可离线部署
 
@@ -25,6 +27,22 @@
 
 ## 快速开始
 
+## 🚀 一键部署（Windows exe，推荐给非开发者）
+
+从 [Releases](https://github.com/gemingla/csboard/releases) 下载 `csboard.exe`，**双击即用**：
+
+1. 双击 `csboard.exe` → 自动选择空闲端口、启动服务、打开浏览器
+2. 数据保存在 **exe 同级的 `data/` 目录**（绿色免安装，可直接拷 U 盘）
+3. 想把唱歌视频带上：在 exe 旁边建 `video/` 放进 mp4，或直接把 mp4 丢进 `data/media/`
+4. 局域网共享：设置环境变量 `CSBOARD_HOST=0.0.0.0` 后启动，同网段设备访问 `http://你的IP:端口`
+
+环境变量：`CSBOARD_PORT`（指定端口，默认自动找空闲）、`CSBOARD_NO_BROWSER=1`（不自动开浏览器）、
+`BB_ADMIN_USER` / `BB_ADMIN_PASSWORD`（首次生成管理员账号时使用）。
+
+> 首次启动会创建 `data/beastboard.db` 与管理员账号 `admin / admin123456` —— 请登录后到「设置」里改密。
+
+## 源码运行（开发者）
+
 ```bash
 pip install -r requirements.txt
 python run.py
@@ -35,7 +53,20 @@ python run.py
 - 默认管理员：`admin / admin123456`（可用环境变量覆盖：`BB_ADMIN_USER` / `BB_ADMIN_PASSWORD`）
 - 视频素材：把 mp4 放进 `data/media/` 即出现在左右献唱位（前两个视频轮流播放）
 
-## 部署
+## 自行打包 exe
+
+```bash
+pip install pyinstaller
+pyinstaller --onefile --name csboard \
+  --add-data "app/templates;app/templates" --add-data "app/static;app/static" \
+  --collect-submodules uvicorn \
+  --exclude-module PyQt5 --exclude-module PyQt6 --exclude-module PySide6 \
+  --exclude-module tkinter --exclude-module matplotlib --exclude-module pandas \
+  launcher.py
+# 产物：dist/csboard.exe（约 39 MB，单文件免安装）
+```
+
+## 部署（服务器）
 
 ```bash
 uvicorn app.main:app --host 0.0.0.0 --port 8000

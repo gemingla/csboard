@@ -12,16 +12,21 @@ from pathlib import Path
 
 from sqlalchemy import select
 
-from .config import BOARD_NAME, DEFAULT_ADMIN, MEDIA_DIR
+from .config import BASE_DIR, BOARD_NAME, DEFAULT_ADMIN, MEDIA_DIR
 from .database import SessionLocal
 from .models import Admin, Board
 from .security import hash_password
 
 _VIDEOS = ["yt.mp4", "闫涛10.mp4"]
 
+# 视频素材来源候选（按顺序查找，找到即复制到 data/media/）：
+# 1) exe / 项目同级的 video/ 目录（打包分发时最方便）
+# 2) 原版程序发布目录里的 video/
 _SOURCE_DIR_CANDIDATES = [
+    BASE_DIR / "video",
+    BASE_DIR.parent / "video",
+    BASE_DIR / "好人榜1.2正式版（官方）(1)" / "video",
     Path(__file__).resolve().parent.parent.parent / "好人榜1.2正式版（官方）(1)" / "video",
-    Path("好人榜1.2正式版（官方）(1)") / "video",
 ]
 
 

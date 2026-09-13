@@ -541,6 +541,95 @@ input[type=file]::file-selector-button {
 }
 input[type=file]::file-selector-button:hover { filter: brightness(1.06); }
 
+/* ============================================================
+   丝滑动画层（v0.2.1）
+   —— 入场交错 / 光斑跟随 / 涟漪 / 滚动进度 / 献唱律动
+   ============================================================ */
+
+/* 入场：位移 + 模糊 + 淡入，配合 JS 的过渡延迟做交错 */
+.reveal {
+  opacity: 0;
+  transform: translateY(14px) scale(.995);
+  filter: blur(6px);
+  transition: opacity .62s cubic-bezier(.22, 1, .36, 1),
+              transform .62s cubic-bezier(.22, 1, .36, 1),
+              filter .62s cubic-bezier(.22, 1, .36, 1);
+  will-change: opacity, transform;
+}
+.reveal.revealed { opacity: 1; transform: none; filter: none; }
+
+/* 背景光斑跟随鼠标（--mx/--my 由 JS 缓动更新） */
+body {
+  background:
+    radial-gradient(520px 520px at var(--mx, 85%) var(--my, -10%), #ff9ec42e, transparent 62%),
+    radial-gradient(480px 480px at calc(100% - var(--mx, 85%)) calc(100% - var(--my, -10%)), #b79cff28, transparent 62%),
+    var(--bg);
+}
+
+/* 按钮涟漪 */
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,.65), rgba(255,255,255,0) 70%);
+  transform: scale(0);
+  animation: ripple .62s cubic-bezier(.22, 1, .36, 1) forwards;
+  pointer-events: none;
+}
+@keyframes ripple { to { transform: scale(2.6); opacity: 0; } }
+
+/* 顶部滚动进度条 */
+.scroll-progress {
+  position: fixed; top: 0; left: 0; height: 3px; width: 100%;
+  transform-origin: 0 50%; transform: scaleX(0);
+  background: linear-gradient(90deg, #ff9ec4, #e8467c 55%, #b79cff);
+  box-shadow: 0 0 14px rgba(232,70,124,.5);
+  z-index: 200; pointer-events: none;
+  transition: transform .12s linear;
+}
+
+/* 榜单行：hover 光带跟随光标位置 */
+.rank-row::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(220px 120px at var(--hx, 50%) 50%, rgba(232,70,124,.13), transparent 70%);
+  opacity: 0; transition: opacity .28s ease;
+}
+.rank-row:hover::before { opacity: 1; }
+
+/* 正在献唱的视频：柔和呼吸光晕 */
+.side-video video.is-singing { animation: singing 3.4s ease-in-out infinite; }
+@keyframes singing {
+  0%, 100% { box-shadow: inset 0 0 0 rgba(232,70,124,0); }
+  50% { box-shadow: inset 0 0 40px rgba(232,70,124,.22); }
+}
+
+/* 奖牌：入场后轻微闪耀 */
+.rank-row.medal-1 .row-medal,
+.rank-row.medal-2 .row-medal,
+.rank-row.medal-3 .row-medal { animation: medalPop .7s cubic-bezier(.22, 1.4, .36, 1) both; }
+@keyframes medalPop {
+  0% { transform: scale(.4) rotate(-14deg); opacity: 0; }
+  70% { transform: scale(1.14) rotate(4deg); }
+  100% { transform: none; opacity: 1; }
+}
+
+/* 围观指数 hover 脉动 */
+.row-heat { transition: transform .2s ease; }
+.rank-row:hover .row-heat { transform: scale(1.06); }
+
+/* CTA 淡出 */
+.fade-out { opacity: 0 !important; transition: opacity .3s ease; }
+
+/* 无障碍：尊重系统“减少动态效果” */
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1 !important; transform: none !important; filter: none !important; }
+  .side-video video.is-singing,
+  .rank-row.medal-1 .row-medal,
+  .rank-row.medal-2 .row-medal,
+  .rank-row.medal-3 .row-medal { animation: none !important; }
+  .scroll-progress { display: none; }
+  html { scroll-behavior: auto; }
+}
+
 /* ---------- 闪现消息 ---------- */
 .flash {
   position: fixed; top: 70px; right: 20px; z-index: 99;
