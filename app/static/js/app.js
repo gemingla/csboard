@@ -105,17 +105,36 @@
     update();
   }
 
-  /* ---- 条款弹窗 ---- */
+  /* ---- 条款弹窗（双保险：服务端 session + 本地 localStorage） ---- */
   function bindTerms() {
     var overlay = document.getElementById("terms-overlay");
     if (!overlay) return;
-    document.getElementById("terms-accept")?.addEventListener("click", function () {
-      overlay.classList.add("hidden");
-      try {
-        sessionStorage.setItem("bb_terms_ok", "1");
-        if (window.location.hash === "#terms") history.replaceState(null, "", window.location.pathname);
-      } catch (e) { /* 忽略隐私模式 */ }
-    });
+    var KEY = "csboard_terms_ok";
+    var accepted = false;
+    try { accepted = localStorage.getItem(KEY) === "1"; } catch (e) { /* 隐私模式 */ }
+
+    /* 本机已接受过 → 直接不再打扰（兼容 Cookie 丢失、换标签页等情况） */
+    if (accepted) { overlay.remove(); return; }
+
+    function markAndHide() {
+      try { localStorage.setItem(KEY, "1"); } catch (e) { /* 忽略 */ }
+      overlay.classList.add("fade-out");
+      setTimeout(function () { overlay.remove(); }, 320);
+    }
+
+    var form = overlay.querySelector("form");
+    if (form) {
+      /* 拦截表单提交：后台静默记录 session，页面不跳转 */
+      form.addEventListener("submit", function (ev) {
+        ev.preventDefault();
+        fetch("/terms/accept", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "X-Requested-With": "fetch" }
+        }).catch(function () { /* 离线/失败也放行 */ })
+          .finally(markAndHide);
+      });
+    }
     document.getElementById("terms-reject")?.addEventListener("click", function () {
       window.location.href = "/terms-rejected";
     });

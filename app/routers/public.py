@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -67,7 +67,14 @@ def about(request: Request):
 
 @router.post("/terms/accept")
 def terms_accept(request: Request):
+    """记录条款已接受。
+
+    - 前端 fetch 调用（X-Requested-With: fetch）→ 返回 204，页面不跳转
+    - 普通表单提交（无 JS 环境）→ 303 回到首页
+    """
     request.session["terms_ok"] = True
+    if request.headers.get("x-requested-with") == "fetch":
+        return Response(status_code=204)
     return RedirectResponse("/", status_code=303)
 
 

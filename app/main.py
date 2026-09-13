@@ -25,7 +25,24 @@ config.ensure_dirs()
 
 app = FastAPI(title=config.APP_NAME, version=config.VERSION)
 
-app.add_middleware(SessionMiddleware, secret_key=config.load_secret_key())
+# 会话 Cookie 持久化（一年）：否则关闭浏览器后条款弹窗会重复出现
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=config.load_secret_key(),
+    max_age=60 * 60 * 24 * 365,
+    same_site="lax",
+)
+
+
+@app.middleware("http")
+async def no_cache_html(request, call_next):  # noqa: ANN001
+    """HTML 页面禁止缓存：避免浏览器拿旧页面（例如已接受的条款弹窗再次出现）。"""
+    response = await call_next(request)
+    ctype = response.headers.get("content-type", "")
+    if ctype.startswith("text/html"):
+        response.headers["Cache-Control"] = "no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+    return response
 
 app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
 app.mount("/media", StaticFiles(directory=config.MEDIA_DIR), name="media")
