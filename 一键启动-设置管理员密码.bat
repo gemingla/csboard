@@ -14,9 +14,11 @@ set BB_ADMIN_RESET=0
 :: ============================================================
 
 cd /d "%~dp0"
-if not exist "csboard.exe" (
+set EXE=csboard.exe
+if not exist "%EXE%" for %%F in (csboard*.exe) do set EXE=%%F
+if not exist "%EXE%" (
   echo.
-  echo   [x] 没找到 csboard.exe
+  echo   [x] 本目录没找到 csboard.exe
   echo       请把本文件放到 csboard.exe 所在的同一个文件夹里再运行
   echo.
   pause
@@ -24,8 +26,9 @@ if not exist "csboard.exe" (
 )
 echo.
 echo   正在启动 cs榜 ...
+echo   启动文件   : %EXE%
 echo   管理员账号 : %BB_ADMIN_USER%
-echo   重置模式   : %BB_ADMIN_RESET%  （1=本次启动强制重置密码）
+echo   重置模式   : %BB_ADMIN_RESET%   （1 = 本次启动强制重置密码，数据不受影响）
 echo.
-csboard.exe
+"%EXE%"
 pause
