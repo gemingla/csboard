@@ -225,14 +225,6 @@ def first_run_setup(db_path: Path) -> None:
 
 
 # ------------------------------------------------------------------ 自动更新
-def _parse_version(text: str) -> tuple:
-    parts = []
-    for chunk in str(text).lstrip("vV").split("."):
-        digits = "".join(ch for ch in chunk if ch.isdigit())
-        parts.append(int(digits) if digits else 0)
-    return tuple(parts)
-
-
 def _fetch_latest(timeout: int = 7) -> tuple[str, str] | None:
     """读取 GitHub 最新 Release：返回 (下载地址, 版本号)；失败返回 None。"""
     url = f"https://api.github.com/repos/{REPO}/releases/latest"
@@ -308,7 +300,6 @@ def main() -> None:
     if os.environ.get("CSBOARD_DIAGNOSE") == "1":
         diagnose()
         return
-    _cleanup_update_residue()
     _setup_ssl()
     host = os.environ.get("CSBOARD_HOST", "127.0.0.1")
     env_port = os.environ.get("CSBOARD_PORT", "").strip()
