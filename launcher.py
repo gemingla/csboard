@@ -30,6 +30,8 @@ from pathlib import Path
 
 REPO = "gemingla/csboard"          # 自动更新来源
 IS_FROZEN = getattr(sys, "frozen", False)
+EXE_PATH = Path(sys.executable) if IS_FROZEN else Path("csboard.exe")
+STAGED_PREFIX = ".csboard_"        # 更新暂存文件前缀（新版本先以此名启动，再自改名）
 
 
 def _setup_console() -> None:
@@ -46,7 +48,84 @@ def _setup_console() -> None:
             pass
 
 
+def _promote_staged() -> None:
+    """本进程若由更新暂存文件启动：顶掉旧 exe 并把自身改回原名。
+
+    Windows 不允许覆盖/删除正在运行的 exe，但**允许重命名**它，
+    因此「启动新文件 → 删掉旧文件 → 把自己改回原名」是最稳的自动更新落地方式。
+    """
+    global EXE_PATH
+    if not IS_FROZEN or not EXE_PATH.name.startswith(STAGED_PREFIX):
+        return
+    original = EXE_PATH.with_name("csboard.exe")
+    try:
+        if original.exists():
+            original.unlink()
+    except OSError:
+        return                       # 旧版本仍在运行 → 保持暂存名继续服务
+    try:
+        os.replace(EXE_PATH, original)
+        EXE_PATH = original
+        print(f"[更新] 已升级并接管原程序名：{original.name}")
+    except OSError:
+        pass
+
+
+def _cleanup_update_residue() -> None:
+    """清理更新过程残留（.exe.new / 更新脚本 / 旧的暂存文件）。"""
+    if not IS_FROZEN:
+        return
+    folder = EXE_PATH.parent
+    patterns = ["*.exe.new", "_csboard_selfupdate.bat", f"{STAGED_PREFIX}*.exe"]
+    for pattern in patterns:
+        for leftover in folder.glob(pattern):
+            if leftover.resolve() == EXE_PATH.resolve():
+                continue
+            try:
+                leftover.unlink()
+            except OSError:
+                pass
+
+
 # --------------------------------------------------------------------- 基础
+def _setup_ssl() -> None:
+    """确保 HTTPS 有可用证书链：打包环境常缺系统证书，优先使用随包携带的 certifi。"""
+    try:
+        import certifi  # type: ignore
+        path = certifi.where()
+        if os.path.exists(path):
+            os.environ.setdefault("SSL_CERT_FILE", path)
+            os.environ.setdefault("REQUESTS_CA_BUNDLE", path)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def diagnose() -> None:
+    """诊断模式（CSBOARD_DIAGNOSE=1）：打印更新检查的完整过程与错误。"""
+    _setup_console()
+    _setup_ssl()
+    print("[诊断] Python:", sys.version.split()[0])
+    print("[诊断] frozen:", IS_FROZEN, "| executable:", sys.executable)
+    print("[诊断] SSL_CERT_FILE:", os.environ.get("SSL_CERT_FILE", "(未设置)"))
+    try:
+        import ssl
+        print("[诊断] 默认证书路径:", ssl.get_default_verify_paths())
+    except Exception as exc:  # noqa: BLE001
+        print("[诊断] ssl 模块信息获取失败:", exc)
+    try:
+        import certifi  # type: ignore
+        print("[诊断] certifi:", certifi.where(), "存在:", os.path.exists(certifi.where()))
+    except Exception as exc:  # noqa: BLE001
+        print("[诊断] certifi 不可用:", exc)
+    try:
+        latest = _fetch_latest()
+        print("[诊断] 抓取 GitHub Release 成功:", latest)
+    except Exception as exc:  # noqa: BLE001
+        import traceback
+        traceback.print_exc()
+        print("[诊断] 抓取失败:", type(exc).__name__, exc)
+
+
 def find_free_port(preferred: int = 8000, tries: int = 30) -> int:
     """从 preferred 开始找一个空闲端口；都被占用则由系统分配。"""
     for port in range(preferred, preferred + tries):
@@ -135,23 +214,24 @@ def _fetch_latest(timeout: int = 7) -> tuple[str, str] | None:
     return None
 
 
-def _apply_update(new_file: Path, exe: Path) -> bool:
-    """写一个等待脚本：本进程退出后替换 exe 并重启。成功返回 True。"""
-    script = exe.parent / "_csboard_selfupdate.bat"
-    body = (
-        "@echo off\r\n"
-        "chcp 65001 >nul\r\n"
-        "timeout /t 2 /nobreak >nul\r\n"
-        ":wait\r\n"
-        f'tasklist /FI "IMAGENAME eq {exe.name}" 2>NUL | find /I "{exe.name}" >NUL\r\n'
-        "if not errorlevel 1 (timeout /t 1 /nobreak >NUL & goto wait)\r\n"
-        f'move /Y "{new_file}" "{exe}" >nul 2>NUL\r\n'
-        f'start "" "{exe}"\r\n'
-        'del "%~f0" >nul 2>NUL\r\n'
-    )
+def _apply_update(new_file: Path, tag: str) -> bool:
+    """启动新版本并让当前进程退出。
+
+    做法：把新文件改为暂存名（.csboard_vX.Y.Z.exe）并直接启动它；
+    新进程启动时会删掉旧 exe 并把自己改回 csboard.exe（见 _promote_staged）。
+    这样完全避开「替换正在运行的文件」这一 Windows 锁定问题。
+    """
+    staged = EXE_PATH.with_name(f"{STAGED_PREFIX}{tag or 'new'}.exe")
     try:
-        script.write_text(body, encoding="utf-8")
-        subprocess.Popen(["cmd", "/c", str(script)],
+        if staged.exists():
+            staged.unlink()
+        new_file.replace(staged)
+    except OSError:
+        return False
+    try:
+        env = dict(os.environ)
+        env.pop("CSBOARD_FORCE_UPDATE", None)   # 避免新版本再次强制更新形成循环
+        subprocess.Popen([str(staged)], cwd=str(EXE_PATH.parent), env=env,
                          creationflags=getattr(subprocess, "DETACHED_PROCESS", 0),
                          close_fds=True)
         return True
@@ -163,26 +243,31 @@ def check_update(current_version: str, quiet: bool = True) -> None:
     """后台检查更新：抓到新版本就下载（可选自动重启）；任何失败都静默跳过。"""
     if os.environ.get("CSBOARD_NO_UPDATE") == "1":
         return
+    force = os.environ.get("CSBOARD_FORCE_UPDATE") == "1"
     try:
+        _setup_ssl()
         latest = _fetch_latest()
         if not latest:
             return
         url, tag = latest
-        if not url or _parse_version(tag) <= _parse_version(current_version):
+        if not url:
             return
-        print(f"\n[更新] 发现新版本 {tag}（当前 v{current_version}），正在下载…")
-        target = Path(sys.executable).with_suffix(".exe.new") if IS_FROZEN else \
-            Path("csboard.exe.new")
+        if not force and _parse_version(tag) <= _parse_version(current_version):
+            return
+        print(f"\n[更新] {'强制更新' if force else '发现新版本'} {tag}（当前 v{current_version}），正在下载…")
+        target = EXE_PATH.with_suffix(".exe.new") if IS_FROZEN else Path("csboard.exe.new")
         urllib.request.urlretrieve(url, target)
         print(f"[更新] 下载完成：{target.name}")
         if os.environ.get("CSBOARD_AUTO_UPDATE") == "1" and IS_FROZEN:
-            if _apply_update(target, Path(sys.executable)):
-                print("[更新] 正在重启以应用新版本…\n")
+            if _apply_update(target, tag):
+                print("[更新] 正在切换到新版本…\n")
                 time.sleep(1)
                 os._exit(0)
+            print("[更新] 自动切换失败，已保留 csboard.exe.new，可手动改名覆盖\n")
         else:
-            print("[更新] 关闭本窗口后，新版本文件已下载，可手动替换 exe 使用")
-            print("[更新] 或设置 CSBOARD_AUTO_UPDATE=1 让程序下次自动完成替换重启\n")
+            print("[更新] 新版本已下载（csboard.exe.new）：")
+            print("[更新]   · 设 CSBOARD_AUTO_UPDATE=1 可让程序自动切换过去")
+            print("[更新]   · 或手动关闭本窗口后，把 .new 文件改名覆盖 csboard.exe\n")
     except Exception as exc:  # noqa: BLE001 —— 网络/权限/环境任何问题都只跳过
         if not quiet:
             print(f"[更新] 已跳过（{type(exc).__name__}: {exc}）")
@@ -191,6 +276,12 @@ def check_update(current_version: str, quiet: bool = True) -> None:
 # -------------------------------------------------------------------- 主流程
 def main() -> None:
     _setup_console()
+    if os.environ.get("CSBOARD_DIAGNOSE") == "1":
+        diagnose()
+        return
+    _promote_staged()               # 若本进程是更新下来的新版本：接管原文件名
+    _cleanup_update_residue()
+    _setup_ssl()
     host = os.environ.get("CSBOARD_HOST", "127.0.0.1")
     env_port = os.environ.get("CSBOARD_PORT", "").strip()
     port = int(env_port) if env_port.isdigit() else find_free_port()
